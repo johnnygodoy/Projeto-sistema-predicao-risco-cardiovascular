@@ -318,6 +318,29 @@ O resultado foi um modelo equilibrado, adequado para aplicações de triagem,
 com bom compromisso entre sensibilidade e especificidade.
 
 
+
+==============Projeto II: ====================
+
+O GridSearchCV foi substituído por um Algoritmo Genético implementado manualmente,
+ com o objetivo de atender à exigência de otimização evolutiva dos hiperparâmetros. 
+ A codificação genética foi feita por meio de dicionários, nos quais cada gene representa um 
+ hiperparâmetro do XGBoost. Foram implementados seleção por torneio, cruzamento uniforme, 
+ mutação aleatória e elitismo. A função fitness foi baseada no F1-score, considerando também a 
+ necessidade de manter recall mínimo de 80% por se tratar de um problema de apoio ao diagnóstico 
+ cardiovascular.
+
+
+O Algoritmo Genético não causou uma melhora gigantesca, mas produziu um modelo mais equilibrado, 
+com aumento de acurácia, precisão, F1-score e ROC-AUC, mantendo recall acima de 80%. Isso é adequado para um sistema
+ de apoio à triagem de risco cardiovascular, 
+pois preserva boa capacidade de identificação de pacientes em risco enquanto reduz parte dos falsos positivos.
+
+A Figura de Convergência do Algoritmo Genético apresenta a evolução do melhor fitness obtido em cada geração para 
+os três experimentos realizados. Observa-se que o Experimento 3, configurado com maior população 
+e maior taxa de mutação, obteve o melhor desempenho geral, atingindo F1-score de 0,7386 na validação. Após a seleção do melhor indivíduo, o modelo final otimizado apresentou F1-score de 0,7403, acurácia de 0,7201 e ROC-AUC de 0,8000 no conjunto de teste. Em comparação ao modelo original, houve melhora em acurácia, precisão, F1-score e ROC-AUC, mantendo
+ recall superior a 80%, fator relevante para aplicações de apoio ao diagnóstico cardiovascular.
+
+
  COMANDOS BASH: 
 1. CRIAR E ATIVAR AMBIENTE VIRTUAL
  python -m venv venv
