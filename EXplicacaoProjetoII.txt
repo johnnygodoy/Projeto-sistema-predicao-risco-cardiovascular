@@ -1,0 +1,91 @@
+# Projeto II - Otimização por Algoritmo Genético
+
+## Descrição da Implementação
+
+O `GridSearchCV` foi substituído por um Algoritmo Genético implementado manualmente, com o objetivo de atender à exigência de otimização 
+evolutiva dos hiperparâmetros do modelo de diagnóstico cardiovascular.
+
+A codificação genética foi feita por meio de dicionários, nos quais cada gene representa um hiperparâmetro do modelo `XGBoost`. 
+Foram implementados os seguintes componentes:
+
+- Seleção por torneio;
+- Cruzamento uniforme;
+- Mutação aleatória;
+- Elitismo;
+- Função fitness baseada no F1-score.
+
+A função fitness foi baseada no F1-score, considerando também a necessidade de manter recall mínimo de 80%, por se tratar de um problema
+ de apoio ao diagnóstico cardiovascular.
+
+## Resultado da Otimização
+
+O Algoritmo Genético não causou uma melhora muito grande, mas produziu um modelo mais equilibrado, com aumento de acurácia, 
+precisão, F1-score e ROC-AUC, mantendo recall acima de 80%.
+
+Isso é adequado para um sistema de apoio à triagem de risco cardiovascular, pois preserva boa capacidade de identificação de 
+pacientes em risco enquanto reduz parte dos falsos positivos.
+
+## Comparação entre Modelo Original e Modelo Otimizado
+
+| Métrica | Modelo Original | Modelo Otimizado com GA |
+|---|---:|---:|
+| Accuracy | 0.7064 | 0.7201 |
+| Precision | 0.6603 | 0.6839 |
+| Recall | 0.8366 | 0.8067 |
+| F1-score | 0.7381 | 0.7403 |
+| ROC-AUC | 0.7976 | 0.8000 |
+
+## Melhor Experimento
+
+O melhor resultado foi obtido no **Experimento 3**, configurado com maior população e maior taxa de mutação.
+
+Configuração utilizada:
+
+```json
+{
+  "tamanho_populacao": 10,
+  "geracoes": 5,
+  "taxa_cruzamento": 0.9,
+  "taxa_mutacao": 0.2
+}
+
+
+{
+  "n_estimators": 500,
+  "max_depth": 5,
+  "learning_rate": 0.01,
+  "subsample": 0.7,
+  "colsample_bytree": 0.8,
+  "min_child_weight": 3,
+  "gamma": 0.1,
+  "reg_lambda": 1
+}
+
+
+
+##Convergência do Algoritmo Genético
+
+A Figura de Convergência do Algoritmo Genético apresenta a evolução do melhor fitness obtido em cada geração 
+para os três experimentos realizados.
+
+Observa-se que o Experimento 3, configurado com maior população e maior taxa de mutação, obteve o melhor desempenho geral, 
+atingindo F1-score de 0.7386 na validação.
+
+Após a seleção do melhor indivíduo, o modelo final otimizado apresentou F1-score de 0.7403, acurácia de 0.7201 e ROC-AUC de 0.8000 no 
+conjunto de teste.
+
+Em comparação ao modelo original, houve melhora em acurácia, precisão, F1-score e ROC-AUC, mantendo recall superior a 80%, 
+fator relevante para aplicações de apoio ao diagnóstico cardiovascular. 
+
+
+
+##Explicação para o Vídeo
+
+Aqui temos a curva de convergência do Algoritmo Genético. Cada linha representa um experimento com configuração diferente
+ de população, mutação, cruzamento e número de gerações.
+
+O melhor desempenho foi obtido no Experimento 3. A partir da segunda geração, o algoritmo encontrou um conjunto de 
+hiperparâmetros superior e manteve esse indivíduo nas gerações seguintes por meio de elitismo.
+
+Esse comportamento mostra que o algoritmo conseguiu evoluir a população inicial e preservar a melhor solução encontrada ao 
+longo das gerações.
