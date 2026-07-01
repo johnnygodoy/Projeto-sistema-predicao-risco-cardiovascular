@@ -1,5 +1,5 @@
 {
-    "data_execucao": "2026-06-30 18:56:34",
+    "data_execucao": "2026-06-30 22:02:34",
     "modelo_original": {
         "modelo": "XGBoost Original",
         "threshold": 0.35,
@@ -12,20 +12,20 @@
     "modelo_otimizado_algoritmo_genetico": {
         "modelo": "XGBoost Otimizado por Algoritmo Genético",
         "threshold": 0.38,
-        "accuracy": 0.7200881380829967,
-        "precision": 0.6839189019015237,
-        "recall": 0.8067439096850861,
-        "f1_score": 0.7402712465071901,
-        "roc_auc": 0.8000237653560845,
+        "accuracy": 0.7197943444730077,
+        "precision": 0.6853004700800407,
+        "recall": 0.8012477718360071,
+        "f1_score": 0.7387523111689379,
+        "roc_auc": 0.7993631285982005,
         "melhores_hiperparametros": {
-            "n_estimators": 500,
-            "max_depth": 5,
-            "learning_rate": 0.01,
+            "n_estimators": 100,
+            "max_depth": 6,
+            "learning_rate": 0.05,
             "subsample": 0.7,
-            "colsample_bytree": 0.8,
+            "colsample_bytree": 1.0,
             "min_child_weight": 3,
-            "gamma": 0.1,
-            "reg_lambda": 1
+            "gamma": 0.5,
+            "reg_lambda": 0.5
         },
         "melhor_experimento": "Experimento 3 - População maior e mutação alta"
     },
@@ -33,255 +33,138 @@
         {
             "nome_experimento": "Experimento 3 - População maior e mutação alta",
             "melhor_individuo": {
-                "n_estimators": 500,
-                "max_depth": 5,
-                "learning_rate": 0.01,
+                "n_estimators": 100,
+                "max_depth": 6,
+                "learning_rate": 0.05,
                 "subsample": 0.7,
-                "colsample_bytree": 0.8,
+                "colsample_bytree": 1.0,
                 "min_child_weight": 3,
-                "gamma": 0.1,
-                "reg_lambda": 1
+                "gamma": 0.5,
+                "reg_lambda": 0.5
             },
-            "melhor_fitness": 0.7385967822192735,
+            "melhor_fitness": 0.7379949452401011,
             "melhores_metricas_validacao": {
-                "threshold": 0.36,
-                "accuracy": 0.710613294160852,
-                "precision": 0.667416067146283,
-                "recall": 0.8267731154845896,
-                "f1_score": 0.7385967822192735,
-                "roc_auc": 0.8042243252440809
+                "threshold": 0.37,
+                "accuracy": 0.7144693352919574,
+                "precision": 0.67550894509562,
+                "recall": 0.8132194578536948,
+                "f1_score": 0.7379949452401011,
+                "roc_auc": 0.803568405745533
             },
             "tamanho_populacao": 10,
             "geracoes": 5,
             "taxa_cruzamento": 0.9,
             "taxa_mutacao": 0.2,
-            "tempo_total_segundos": 30.24,
+            "tempo_total_segundos": 23.96,
             "historico": [
                 {
                     "geracao": 1,
-                    "melhor_fitness": 0.7378224676502102,
+                    "melhor_fitness": 0.7379949452401011,
                     "melhor_individuo": {
                         "n_estimators": 100,
                         "max_depth": 6,
                         "learning_rate": 0.05,
-                        "subsample": 1.0,
-                        "colsample_bytree": 0.8,
-                        "min_child_weight": 5,
-                        "gamma": 0,
+                        "subsample": 0.7,
+                        "colsample_bytree": 1.0,
+                        "min_child_weight": 3,
+                        "gamma": 0.5,
                         "reg_lambda": 0.5
                     },
                     "metricas": {
-                        "threshold": 0.36,
-                        "accuracy": 0.7079507895703269,
-                        "precision": 0.6634059582036461,
-                        "recall": 0.831043445971036,
-                        "f1_score": 0.7378224676502102,
-                        "roc_auc": 0.8035424238945895
+                        "threshold": 0.37,
+                        "accuracy": 0.7144693352919574,
+                        "precision": 0.67550894509562,
+                        "recall": 0.8132194578536948,
+                        "f1_score": 0.7379949452401011,
+                        "roc_auc": 0.803568405745533
                     }
                 },
                 {
                     "geracao": 2,
-                    "melhor_fitness": 0.7385967822192735,
+                    "melhor_fitness": 0.7379949452401011,
                     "melhor_individuo": {
-                        "n_estimators": 500,
-                        "max_depth": 5,
-                        "learning_rate": 0.01,
+                        "n_estimators": 100,
+                        "max_depth": 6,
+                        "learning_rate": 0.05,
                         "subsample": 0.7,
-                        "colsample_bytree": 0.8,
+                        "colsample_bytree": 1.0,
                         "min_child_weight": 3,
-                        "gamma": 0.1,
-                        "reg_lambda": 1
+                        "gamma": 0.5,
+                        "reg_lambda": 0.5
                     },
                     "metricas": {
-                        "threshold": 0.36,
-                        "accuracy": 0.710613294160852,
-                        "precision": 0.667416067146283,
-                        "recall": 0.8267731154845896,
-                        "f1_score": 0.7385967822192735,
-                        "roc_auc": 0.8042243252440809
+                        "threshold": 0.37,
+                        "accuracy": 0.7144693352919574,
+                        "precision": 0.67550894509562,
+                        "recall": 0.8132194578536948,
+                        "f1_score": 0.7379949452401011,
+                        "roc_auc": 0.803568405745533
                     }
                 },
                 {
                     "geracao": 3,
-                    "melhor_fitness": 0.7385967822192735,
+                    "melhor_fitness": 0.7379949452401011,
                     "melhor_individuo": {
-                        "n_estimators": 500,
-                        "max_depth": 5,
-                        "learning_rate": 0.01,
+                        "n_estimators": 100,
+                        "max_depth": 6,
+                        "learning_rate": 0.05,
                         "subsample": 0.7,
-                        "colsample_bytree": 0.8,
+                        "colsample_bytree": 1.0,
                         "min_child_weight": 3,
-                        "gamma": 0.1,
-                        "reg_lambda": 1
+                        "gamma": 0.5,
+                        "reg_lambda": 0.5
                     },
                     "metricas": {
-                        "threshold": 0.36,
-                        "accuracy": 0.710613294160852,
-                        "precision": 0.667416067146283,
-                        "recall": 0.8267731154845896,
-                        "f1_score": 0.7385967822192735,
-                        "roc_auc": 0.8042243252440809
+                        "threshold": 0.37,
+                        "accuracy": 0.7144693352919574,
+                        "precision": 0.67550894509562,
+                        "recall": 0.8132194578536948,
+                        "f1_score": 0.7379949452401011,
+                        "roc_auc": 0.803568405745533
                     }
                 },
                 {
                     "geracao": 4,
-                    "melhor_fitness": 0.7385967822192735,
+                    "melhor_fitness": 0.7379949452401011,
                     "melhor_individuo": {
-                        "n_estimators": 500,
-                        "max_depth": 5,
-                        "learning_rate": 0.01,
+                        "n_estimators": 100,
+                        "max_depth": 6,
+                        "learning_rate": 0.05,
                         "subsample": 0.7,
-                        "colsample_bytree": 0.8,
+                        "colsample_bytree": 1.0,
                         "min_child_weight": 3,
-                        "gamma": 0.1,
-                        "reg_lambda": 1
+                        "gamma": 0.5,
+                        "reg_lambda": 0.5
                     },
                     "metricas": {
-                        "threshold": 0.36,
-                        "accuracy": 0.710613294160852,
-                        "precision": 0.667416067146283,
-                        "recall": 0.8267731154845896,
-                        "f1_score": 0.7385967822192735,
-                        "roc_auc": 0.8042243252440809
+                        "threshold": 0.37,
+                        "accuracy": 0.7144693352919574,
+                        "precision": 0.67550894509562,
+                        "recall": 0.8132194578536948,
+                        "f1_score": 0.7379949452401011,
+                        "roc_auc": 0.803568405745533
                     }
                 },
                 {
                     "geracao": 5,
-                    "melhor_fitness": 0.7385967822192735,
+                    "melhor_fitness": 0.7379949452401011,
                     "melhor_individuo": {
-                        "n_estimators": 500,
-                        "max_depth": 5,
-                        "learning_rate": 0.01,
+                        "n_estimators": 100,
+                        "max_depth": 6,
+                        "learning_rate": 0.05,
                         "subsample": 0.7,
-                        "colsample_bytree": 0.8,
+                        "colsample_bytree": 1.0,
                         "min_child_weight": 3,
-                        "gamma": 0.1,
-                        "reg_lambda": 1
-                    },
-                    "metricas": {
-                        "threshold": 0.36,
-                        "accuracy": 0.710613294160852,
-                        "precision": 0.667416067146283,
-                        "recall": 0.8267731154845896,
-                        "f1_score": 0.7385967822192735,
-                        "roc_auc": 0.8042243252440809
-                    }
-                }
-            ]
-        },
-        {
-            "nome_experimento": "Experimento 2 - População média e mutação moderada",
-            "melhor_individuo": {
-                "n_estimators": 100,
-                "max_depth": 6,
-                "learning_rate": 0.05,
-                "subsample": 0.7,
-                "colsample_bytree": 0.9,
-                "min_child_weight": 1,
-                "gamma": 0.5,
-                "reg_lambda": 1.5
-            },
-            "melhor_fitness": 0.7384538983611985,
-            "melhores_metricas_validacao": {
-                "threshold": 0.36,
-                "accuracy": 0.7098788101358795,
-                "precision": 0.6662186379928315,
-                "recall": 0.8282584478277014,
-                "f1_score": 0.7384538983611985,
-                "roc_auc": 0.803639927492258
-            },
-            "tamanho_populacao": 8,
-            "geracoes": 4,
-            "taxa_cruzamento": 0.8,
-            "taxa_mutacao": 0.1,
-            "tempo_total_segundos": 18.26,
-            "historico": [
-                {
-                    "geracao": 1,
-                    "melhor_fitness": 0.7378374010021012,
-                    "melhor_individuo": {
-                        "n_estimators": 100,
-                        "max_depth": 6,
-                        "learning_rate": 0.01,
-                        "subsample": 0.7,
-                        "colsample_bytree": 0.9,
-                        "min_child_weight": 1,
                         "gamma": 0.5,
-                        "reg_lambda": 1.5
+                        "reg_lambda": 0.5
                     },
                     "metricas": {
-                        "threshold": 0.4,
-                        "accuracy": 0.7021667278736687,
-                        "precision": 0.6532627361190613,
-                        "recall": 0.8475677682881545,
-                        "f1_score": 0.7378374010021012,
-                        "roc_auc": 0.8026528363413831
-                    }
-                },
-                {
-                    "geracao": 2,
-                    "melhor_fitness": 0.7379491673970202,
-                    "melhor_individuo": {
-                        "n_estimators": 300,
-                        "max_depth": 5,
-                        "learning_rate": 0.01,
-                        "subsample": 0.8,
-                        "colsample_bytree": 0.9,
-                        "min_child_weight": 5,
-                        "gamma": 0,
-                        "reg_lambda": 1
-                    },
-                    "metricas": {
-                        "threshold": 0.34,
-                        "accuracy": 0.6980352552331986,
-                        "precision": 0.6463363572923936,
-                        "recall": 0.8598217601188266,
-                        "f1_score": 0.7379491673970202,
-                        "roc_auc": 0.8036821627528771
-                    }
-                },
-                {
-                    "geracao": 3,
-                    "melhor_fitness": 0.7384538983611985,
-                    "melhor_individuo": {
-                        "n_estimators": 100,
-                        "max_depth": 6,
-                        "learning_rate": 0.05,
-                        "subsample": 0.7,
-                        "colsample_bytree": 0.9,
-                        "min_child_weight": 1,
-                        "gamma": 0.5,
-                        "reg_lambda": 1.5
-                    },
-                    "metricas": {
-                        "threshold": 0.36,
-                        "accuracy": 0.7098788101358795,
-                        "precision": 0.6662186379928315,
-                        "recall": 0.8282584478277014,
-                        "f1_score": 0.7384538983611985,
-                        "roc_auc": 0.803639927492258
-                    }
-                },
-                {
-                    "geracao": 4,
-                    "melhor_fitness": 0.7384538983611985,
-                    "melhor_individuo": {
-                        "n_estimators": 100,
-                        "max_depth": 6,
-                        "learning_rate": 0.05,
-                        "subsample": 0.7,
-                        "colsample_bytree": 0.9,
-                        "min_child_weight": 1,
-                        "gamma": 0.5,
-                        "reg_lambda": 1.5
-                    },
-                    "metricas": {
-                        "threshold": 0.36,
-                        "accuracy": 0.7098788101358795,
-                        "precision": 0.6662186379928315,
-                        "recall": 0.8282584478277014,
-                        "f1_score": 0.7384538983611985,
-                        "roc_auc": 0.803639927492258
+                        "threshold": 0.37,
+                        "accuracy": 0.7144693352919574,
+                        "precision": 0.67550894509562,
+                        "recall": 0.8132194578536948,
+                        "f1_score": 0.7379949452401011,
+                        "roc_auc": 0.803568405745533
                     }
                 }
             ]
@@ -289,94 +172,211 @@
         {
             "nome_experimento": "Experimento 1 - População pequena e mutação baixa",
             "melhor_individuo": {
-                "n_estimators": 300,
-                "max_depth": 5,
+                "n_estimators": 500,
+                "max_depth": 4,
                 "learning_rate": 0.1,
-                "subsample": 0.8,
-                "colsample_bytree": 1.0,
-                "min_child_weight": 3,
-                "gamma": 0.1,
-                "reg_lambda": 0.5
+                "subsample": 1.0,
+                "colsample_bytree": 0.9,
+                "min_child_weight": 5,
+                "gamma": 0.3,
+                "reg_lambda": 2
             },
-            "melhor_fitness": 0.7379104477611941,
+            "melhor_fitness": 0.7378095481235639,
             "melhores_metricas_validacao": {
                 "threshold": 0.38,
-                "accuracy": 0.717866323907455,
-                "precision": 0.6824420255560814,
-                "recall": 0.8031934645376904,
-                "f1_score": 0.7379104477611941,
-                "roc_auc": 0.799420262458171
+                "accuracy": 0.7171318398824825,
+                "precision": 0.6810683424980362,
+                "recall": 0.804864463423691,
+                "f1_score": 0.7378095481235639,
+                "roc_auc": 0.8040375796366492
             },
             "tamanho_populacao": 6,
             "geracoes": 3,
             "taxa_cruzamento": 0.8,
             "taxa_mutacao": 0.05,
-            "tempo_total_segundos": 10.86,
+            "tempo_total_segundos": 11.97,
             "historico": [
                 {
                     "geracao": 1,
-                    "melhor_fitness": 0.737733499377335,
+                    "melhor_fitness": 0.7378095481235639,
+                    "melhor_individuo": {
+                        "n_estimators": 500,
+                        "max_depth": 4,
+                        "learning_rate": 0.1,
+                        "subsample": 1.0,
+                        "colsample_bytree": 0.9,
+                        "min_child_weight": 5,
+                        "gamma": 0.3,
+                        "reg_lambda": 2
+                    },
+                    "metricas": {
+                        "threshold": 0.38,
+                        "accuracy": 0.7171318398824825,
+                        "precision": 0.6810683424980362,
+                        "recall": 0.804864463423691,
+                        "f1_score": 0.7378095481235639,
+                        "roc_auc": 0.8040375796366492
+                    }
+                },
+                {
+                    "geracao": 2,
+                    "melhor_fitness": 0.7378095481235639,
+                    "melhor_individuo": {
+                        "n_estimators": 500,
+                        "max_depth": 4,
+                        "learning_rate": 0.1,
+                        "subsample": 1.0,
+                        "colsample_bytree": 0.9,
+                        "min_child_weight": 5,
+                        "gamma": 0.3,
+                        "reg_lambda": 2
+                    },
+                    "metricas": {
+                        "threshold": 0.38,
+                        "accuracy": 0.7171318398824825,
+                        "precision": 0.6810683424980362,
+                        "recall": 0.804864463423691,
+                        "f1_score": 0.7378095481235639,
+                        "roc_auc": 0.8040375796366492
+                    }
+                },
+                {
+                    "geracao": 3,
+                    "melhor_fitness": 0.7378095481235639,
+                    "melhor_individuo": {
+                        "n_estimators": 500,
+                        "max_depth": 4,
+                        "learning_rate": 0.1,
+                        "subsample": 1.0,
+                        "colsample_bytree": 0.9,
+                        "min_child_weight": 5,
+                        "gamma": 0.3,
+                        "reg_lambda": 2
+                    },
+                    "metricas": {
+                        "threshold": 0.38,
+                        "accuracy": 0.7171318398824825,
+                        "precision": 0.6810683424980362,
+                        "recall": 0.804864463423691,
+                        "f1_score": 0.7378095481235639,
+                        "roc_auc": 0.8040375796366492
+                    }
+                }
+            ]
+        },
+        {
+            "nome_experimento": "Experimento 2 - População média e mutação moderada",
+            "melhor_individuo": {
+                "n_estimators": 300,
+                "max_depth": 6,
+                "learning_rate": 0.01,
+                "subsample": 0.7,
+                "colsample_bytree": 0.9,
+                "min_child_weight": 1,
+                "gamma": 0.1,
+                "reg_lambda": 2
+            },
+            "melhor_fitness": 0.7375969315434003,
+            "melhores_metricas_validacao": {
+                "threshold": 0.37,
+                "accuracy": 0.7110723466764598,
+                "precision": 0.669441501437869,
+                "recall": 0.8212031191979206,
+                "f1_score": 0.7375969315434003,
+                "roc_auc": 0.8037226108128472
+            },
+            "tamanho_populacao": 8,
+            "geracoes": 4,
+            "taxa_cruzamento": 0.8,
+            "taxa_mutacao": 0.1,
+            "tempo_total_segundos": 20.91,
+            "historico": [
+                {
+                    "geracao": 1,
+                    "melhor_fitness": 0.7371857655892915,
                     "melhor_individuo": {
                         "n_estimators": 300,
-                        "max_depth": 5,
-                        "learning_rate": 0.03,
-                        "subsample": 0.8,
-                        "colsample_bytree": 0.8,
+                        "max_depth": 4,
+                        "learning_rate": 0.05,
+                        "subsample": 1.0,
+                        "colsample_bytree": 0.7,
+                        "min_child_weight": 1,
+                        "gamma": 0.1,
+                        "reg_lambda": 2
+                    },
+                    "metricas": {
+                        "threshold": 0.35,
+                        "accuracy": 0.7043701799485861,
+                        "precision": 0.6577337605592776,
+                        "recall": 0.8384701076865949,
+                        "f1_score": 0.7371857655892915,
+                        "roc_auc": 0.8037246171984813
+                    }
+                },
+                {
+                    "geracao": 2,
+                    "melhor_fitness": 0.7373166133923449,
+                    "melhor_individuo": {
+                        "n_estimators": 300,
+                        "max_depth": 6,
+                        "learning_rate": 0.01,
+                        "subsample": 0.7,
+                        "colsample_bytree": 0.9,
                         "min_child_weight": 5,
                         "gamma": 0.1,
                         "reg_lambda": 1
                     },
                     "metricas": {
                         "threshold": 0.36,
-                        "accuracy": 0.7099706206390011,
-                        "precision": 0.6672172998948791,
-                        "recall": 0.8249164500556999,
-                        "f1_score": 0.737733499377335,
-                        "roc_auc": 0.8033945583314641
-                    }
-                },
-                {
-                    "geracao": 2,
-                    "melhor_fitness": 0.7379104477611941,
-                    "melhor_individuo": {
-                        "n_estimators": 300,
-                        "max_depth": 5,
-                        "learning_rate": 0.1,
-                        "subsample": 0.8,
-                        "colsample_bytree": 1.0,
-                        "min_child_weight": 3,
-                        "gamma": 0.1,
-                        "reg_lambda": 0.5
-                    },
-                    "metricas": {
-                        "threshold": 0.38,
-                        "accuracy": 0.717866323907455,
-                        "precision": 0.6824420255560814,
-                        "recall": 0.8031934645376904,
-                        "f1_score": 0.7379104477611941,
-                        "roc_auc": 0.799420262458171
+                        "accuracy": 0.7057473374954095,
+                        "precision": 0.6600146735143066,
+                        "recall": 0.8351281099145934,
+                        "f1_score": 0.7373166133923449,
+                        "roc_auc": 0.8037831564499262
                     }
                 },
                 {
                     "geracao": 3,
-                    "melhor_fitness": 0.7379104477611941,
+                    "melhor_fitness": 0.7375969315434003,
                     "melhor_individuo": {
                         "n_estimators": 300,
-                        "max_depth": 5,
-                        "learning_rate": 0.1,
-                        "subsample": 0.8,
-                        "colsample_bytree": 1.0,
-                        "min_child_weight": 3,
+                        "max_depth": 6,
+                        "learning_rate": 0.01,
+                        "subsample": 0.7,
+                        "colsample_bytree": 0.9,
+                        "min_child_weight": 1,
                         "gamma": 0.1,
-                        "reg_lambda": 0.5
+                        "reg_lambda": 2
                     },
                     "metricas": {
-                        "threshold": 0.38,
-                        "accuracy": 0.717866323907455,
-                        "precision": 0.6824420255560814,
-                        "recall": 0.8031934645376904,
-                        "f1_score": 0.7379104477611941,
-                        "roc_auc": 0.799420262458171
+                        "threshold": 0.37,
+                        "accuracy": 0.7110723466764598,
+                        "precision": 0.669441501437869,
+                        "recall": 0.8212031191979206,
+                        "f1_score": 0.7375969315434003,
+                        "roc_auc": 0.8037226108128472
+                    }
+                },
+                {
+                    "geracao": 4,
+                    "melhor_fitness": 0.7375969315434003,
+                    "melhor_individuo": {
+                        "n_estimators": 300,
+                        "max_depth": 6,
+                        "learning_rate": 0.01,
+                        "subsample": 0.7,
+                        "colsample_bytree": 0.9,
+                        "min_child_weight": 1,
+                        "gamma": 0.1,
+                        "reg_lambda": 2
+                    },
+                    "metricas": {
+                        "threshold": 0.37,
+                        "accuracy": 0.7110723466764598,
+                        "precision": 0.669441501437869,
+                        "recall": 0.8212031191979206,
+                        "f1_score": 0.7375969315434003,
+                        "roc_auc": 0.8037226108128472
                     }
                 }
             ]
