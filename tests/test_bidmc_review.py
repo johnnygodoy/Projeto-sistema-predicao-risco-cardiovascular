@@ -174,8 +174,8 @@ class ReviewUiTests(unittest.TestCase):
              patch("streamlit.elements.widgets.button.source_util.get_pages", return_value=pages):
             app = self.app()
         links = app.sidebar.get("page_link")
-        self.assertEqual([link.proto.label for link in links], ["Predição de risco", "Monitoramento", "Áudio", "Vídeo"])
-        self.assertEqual([link.proto.icon for link in links], ["🫀", "📈", "🔊", "🎥"])
+        self.assertEqual([link.proto.label for link in links], ["Predição de risco", "Monitoramento", "Internação", "Áudio", "Vídeo"])
+        self.assertEqual([link.proto.icon for link in links], ["🫀", "📈", "🏥", "🔊", "🎥"])
         self.assertEqual(links[1].proto.page, "Monitoramento_Didatico")
         self.assertFalse(app.exception)
 
@@ -192,9 +192,9 @@ class ReviewUiTests(unittest.TestCase):
             app = AppTest.from_file(str(ROOT / "app/app.py"), default_timeout=10).run()
         self.assertFalse(app.exception)
         links = app.sidebar.get("page_link")
-        self.assertEqual([link.proto.label for link in links], ["Predição de risco", "Monitoramento", "Áudio", "Vídeo"])
-        self.assertEqual([link.proto.icon for link in links], ["🫀", "📈", "🔊", "🎥"])
-        self.assertEqual([link.proto.page for link in links], ["app", "Monitoramento_Didatico", "Audio_Local", "Video_Movimento_Local"])
+        self.assertEqual([link.proto.label for link in links], ["Predição de risco", "Monitoramento", "Internação", "Áudio", "Vídeo"])
+        self.assertEqual([link.proto.icon for link in links], ["🫀", "📈", "🏥", "🔊", "🎥"])
+        self.assertEqual([link.proto.page for link in links], ["app", "Monitoramento_Didatico", "Internacao", "Audio_Local", "Video_Movimento_Local"])
 
     def test_default_menu_config_changes_no_launch_or_theme_setting(self):
         import tomllib
