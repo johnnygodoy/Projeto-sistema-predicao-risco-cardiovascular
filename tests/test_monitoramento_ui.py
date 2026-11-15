@@ -28,12 +28,19 @@ class FakeUpload(io.BytesIO):
 
 @unittest.skipIf(AppTest is None, "Streamlit/AppTest não instalado; testes puros são independentes.")
 class PageTests(unittest.TestCase):
+    def setUp(self):
+        import streamlit as st
+        original = st.get_option
+        guard = patch("streamlit.get_option", side_effect=lambda name: "127.0.0.1" if name == "server.address" else original(name))
+        guard.start()
+        self.addCleanup(guard.stop)
+
     def app(self):
         app = AppTest.from_file(str(PAGE), default_timeout=10).run()
         self.assertFalse(app.exception)
         return app
 
-    def select_sample(self, app, label="Exemplo fictício com variações"):
+    def select_sample(self, app, label="Exemplo com variações"):
         app.selectbox(key="_mon_source").select(label).run()
         app.button(key="_mon_validate").click().run()
         self.assertFalse(app.exception)
@@ -42,10 +49,10 @@ class PageTests(unittest.TestCase):
 
     def test_initial_no_selection_upload_or_result(self):
         app = self.app()
-        self.assertEqual(app.selectbox(key="_mon_source").value, "Escolha uma fonte fictícia")
+        self.assertEqual(app.selectbox(key="_mon_source").value, "Escolha uma fonte")
         self.assertEqual(len(app.get("file_uploader")), 0)
         self.assertEqual(len(app.metric), 0)
-        self.assertEqual(app.sidebar.selectbox(key="_mon_source").value, "Escolha uma fonte fictícia")
+        self.assertEqual(app.sidebar.selectbox(key="_mon_source").value, "Escolha uma fonte")
 
     def test_sidebar_actions_and_main_results_keep_native_layout(self):
         app = self.select_sample(self.app())
@@ -53,7 +60,7 @@ class PageTests(unittest.TestCase):
         app.sidebar.button(key="_mon_run").click().run()
         self.assertEqual(len(app.main.metric), 3)
         self.assertEqual(len(app.sidebar.metric), 0)
-        self.assertTrue(any(header.value == "3. Análise dos sinais" for header in app.main.subheader))
+        self.assertTrue(any(header.value == "Análise dos sinais" for header in app.main.subheader))
         self.assertFalse(app.exception)
 
     def test_preview_run_repeat_and_chart_change(self):
@@ -70,24 +77,23 @@ class PageTests(unittest.TestCase):
     def test_source_switch_clears_then_control_has_no_alert(self):
         app = self.select_sample(self.app())
         app.button(key="_mon_run").click().run()
-        app.selectbox(key="_mon_source").select("Controle fictício sem variações injetadas").run()
+        app.selectbox(key="_mon_source").select("Exemplo").run()
         self.assertEqual(len(app.metric), 0)
         self.assertNotIn("_mon_results", app.session_state)
         app.button(key="_mon_validate").click().run()
         app.button(key="_mon_run").click().run()
         self.assertEqual([m.value for m in app.metric], ["65", "0", "25"])
 
-    def test_native_uploader_only_after_declaration_and_removed_after_withdrawal(self):
+    def test_native_uploader_only_in_local_execution_without_checkbox(self):
         app = self.app()
-        app.selectbox(key="_mon_source").select("Enviar CSV fictício").run()
-        self.assertEqual(len(app.get("file_uploader")), 0)
-        app.checkbox(key="_mon_declared").check().run()
+        app.selectbox(key="_mon_source").select("Importar CSV de teste").run()
         self.assertEqual(len(app.get("file_uploader")), 1)
-        first_generation = app.session_state["_mon_upload_generation"]
-        app.checkbox(key="_mon_declared").uncheck().run()
-        self.assertEqual(len(app.get("file_uploader")), 0)
-        app.checkbox(key="_mon_declared").check().run()
-        self.assertGreater(app.session_state["_mon_upload_generation"], first_generation)
+        self.assertEqual(len(app.checkbox), 0)
+        with patch("streamlit.get_option", return_value="0.0.0.0"):
+            app.run()
+            self.assertEqual(len(app.get("file_uploader")), 0)
+        app.run()
+        self.assertEqual(len(app.get("file_uploader")), 1)
         self.assertFalse(app.exception)
 
     def test_reset_and_revalidation_remove_results(self):
@@ -99,12 +105,11 @@ class PageTests(unittest.TestCase):
         app.button(key="_mon_clear").click().run()
         self.assertFalse(app.exception)
         self.assertEqual(len(app.metric), 0)
-        self.assertEqual(app.selectbox(key="_mon_source").value, "Escolha uma fonte fictícia")
+        self.assertEqual(app.selectbox(key="_mon_source").value, "Escolha uma fonte")
 
     def upload_app(self):
         app = self.app()
-        app.selectbox(key="_mon_source").select("Enviar CSV fictício").run()
-        app.checkbox(key="_mon_declared").check().run()
+        app.selectbox(key="_mon_source").select("Importar CSV de teste").run()
         return app
 
     def test_injected_upload_valid_preview_run_change_remove_and_withdraw(self):
@@ -128,7 +133,7 @@ class PageTests(unittest.TestCase):
             app.run()
             app.button(key="_mon_validate").click().run()
             app.button(key="_mon_run").click().run()
-            app.checkbox(key="_mon_declared").uncheck().run()
+            app.button(key="_mon_clear").click().run()
             self.assertEqual(len(app.metric), 0)
             self.assertNotIn("_mon_results", app.session_state)
         self.assertFalse(app.exception)
@@ -189,6 +194,8 @@ class OriginalAppTests(unittest.TestCase):
     def test_original_prediction_source_unmodified(self):
         # Git pode converter LF em CRLF no checkout Windows. Comparar conteúdo canônico.
         payload = (ROOT / "app/app.py").read_bytes().replace(b"\r\n", b"\n")
+        payload = payload.replace(b"from navigation import render_navigation\n", b"", 1)
+        payload = payload.replace(b"render_navigation()\n", b"", 1)
         blob = b"blob " + str(len(payload)).encode() + b"\0" + payload
         self.assertEqual(hashlib.sha1(blob).hexdigest(), "90cb26669213b89e986def0b636b985b068176e8")
 

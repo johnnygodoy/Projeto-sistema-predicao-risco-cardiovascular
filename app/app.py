@@ -3,6 +3,7 @@ import pandas as pd
 import pickle
 import matplotlib.pyplot as plt
 import os
+from navigation import render_navigation
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -15,6 +16,7 @@ st.set_page_config(
     layout="wide",
     page_icon="🫀"
 )
+render_navigation()
 # ===============================
 # LOAD CSS
 # ===============================

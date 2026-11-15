@@ -116,7 +116,7 @@ def _timestamp(value: str, row: int) -> datetime:
     except (ValueError, OverflowError):
         raise ValidationError(f"Linha {row}: data ou hora inválida.") from None
     if not 2000 <= result.year <= 2100:
-        raise ValidationError(f"Linha {row}: use datas fictícias entre 2000 e 2100.")
+        raise ValidationError(f"Linha {row}: use datas entre 2000 e 2100.")
     return result
 
 
