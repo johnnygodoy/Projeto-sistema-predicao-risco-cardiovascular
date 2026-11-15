@@ -102,7 +102,7 @@ class ModelConfigurationTests(unittest.TestCase):
     def test_only_optional_model_directories_are_ignored(self):
         ignore = (Path(__file__).resolve().parents[1] / ".gitignore").read_text()
         model_rules = [line for line in ignore.splitlines() if line and not line.startswith("#") and "model" in line]
-        self.assertEqual(model_rules, ["/models/whisper-tiny/", "/models/pose-landmarker-lite/"])
+        self.assertEqual(model_rules, ["/models/whisper-tiny/", "/models/pose-landmarker-lite/", "/models/video-reference/"])
 
 
 class WavTests(unittest.TestCase):

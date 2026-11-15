@@ -21,3 +21,6 @@ Thumbs.db
 # Peso e ambiente isolado de vídeo, sem afetar outros modelos
 /models/pose-landmarker-lite/
 /.venv-video/
+
+# Referência local autorizada do exercício; nunca publicar mídia
+/models/video-reference/

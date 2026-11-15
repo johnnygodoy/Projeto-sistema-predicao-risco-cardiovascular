@@ -116,6 +116,45 @@ def local_model_path():
     return path
 
 
+def local_reference_path():
+    """Referência configurada uma vez no servidor, nunca por campo do navegador."""
+    raw = os.environ.get("FIAP_VIDEO_REFERENCE_PATH", "")
+    if not raw:
+        return Path(__file__).resolve().parents[1] / "models" / "video-reference" / "referencia-ombro-direito.mp4"
+    message = "Configuração da referência inválida. Use um arquivo MP4 local no servidor."
+    if (len(raw) > 4096 or any(c in raw for c in ("\0", "\n", "\r"))
+            or raw.startswith(("\\\\", "//")) or "://" in raw):
+        raise VideoError(message)
+    path = Path(raw)
+    try:
+        if not path.is_absolute() or path.suffix.lower() != ".mp4" or str(path.resolve()).startswith(("\\\\", "//")):
+            raise VideoError(message)
+    except (OSError, RuntimeError) as exc:
+        raise VideoError(message) from exc
+    return path
+
+
+def read_local_reference():
+    """Lê no máximo o limite do clipe; metadados/pose só serão decodificados ao analisar."""
+    path = local_reference_path()
+    try:
+        if not path.is_file():
+            raise VideoError("Referência local ausente. Configure uma vez um clipe autorizado do exercício no servidor.")
+        if str(path.resolve()).startswith(("\\\\", "//")):
+            raise VideoError("A referência precisa ser um arquivo local, não um caminho de rede.")
+        if path.stat().st_size > MAX_BYTES:
+            raise VideoError("A referência configurada excede 20 MiB. Use um clipe menor.")
+        with path.open("rb") as source:
+            data = source.read(MAX_BYTES + 1)
+    except (OSError, RuntimeError) as exc:
+        raise VideoError("Não foi possível ler a referência local. Confira a configuração no servidor.") from exc
+    try:
+        validate_upload(data)
+    except VideoError as exc:
+        raise VideoError("Referência local inválida. Configure um MP4 de até 20 MiB.") from exc
+    return data
+
+
 @dataclass(frozen=True)
 class Options:
     side: str = "right"
