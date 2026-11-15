@@ -27,14 +27,11 @@ def decode(root: Path):
         raise VideoError("Dependências de vídeo ausentes. Configure o ambiente separado conforme requirements-video-worker.txt.") from exc
     try:
         import cv2
-        import mediapipe as mp
         import numpy as np
     except ImportError as exc:
         raise VideoError("Dependências de vídeo ausentes. Configure o ambiente separado conforme requirements-video-worker.txt.") from exc
     options = Options(**json.loads((root / "options.json").read_text(encoding="utf-8")))
     options.validate()
-    model = root / MODEL_FILENAME
-    verify_model(model)
     cv2.setNumThreads(1)
     capture = cv2.VideoCapture(str(root / "input.mp4"), cv2.CAP_FFMPEG)
     if not capture.isOpened():
@@ -45,6 +42,17 @@ def decode(root: Path):
             "width": capture.get(cv2.CAP_PROP_FRAME_WIDTH), "height": capture.get(cv2.CAP_PROP_FRAME_HEIGHT),
             "fps": capture.get(cv2.CAP_PROP_FPS), "frames": capture.get(cv2.CAP_PROP_FRAME_COUNT),
         })
+        # Duração/resolução antes de carregar o estimador ou ler quadros.
+        import mediapipe as mp
+        model = root / MODEL_FILENAME
+        verify_model(model)
+        codec = int(capture.get(cv2.CAP_PROP_FOURCC))
+        pixel_format = int(capture.get(cv2.CAP_PROP_CODEC_PIXEL_FORMAT))
+        # Cor desconhecida/yuv444p não é encaminhada ao player do navegador.
+        meta["browser_preview_allowed"] = (
+            codec in (cv2.VideoWriter_fourcc(*"h264"), cv2.VideoWriter_fourcc(*"avc1"))
+            and pixel_format == cv2.VideoWriter_fourcc(*"I420")
+        )
         configuration = mp.tasks.vision.PoseLandmarkerOptions(
             base_options=mp.tasks.BaseOptions(model_asset_path=str(model), delegate=mp.tasks.BaseOptions.Delegate.CPU),
             running_mode=mp.tasks.vision.RunningMode.VIDEO,

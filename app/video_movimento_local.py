@@ -207,13 +207,18 @@ def validate_metadata(meta: dict):
         fps, frames = float(meta["fps"]), int(meta["frames"])
     except (TypeError, ValueError, KeyError, OverflowError) as exc:
         raise VideoError("Metadados do vídeo inválidos.") from exc
-    if width <= 0 or height <= 0 or max(width, height) > MAX_SIDE or width * height > MAX_PIXELS:
-        raise VideoError("Resolução inválida ou acima do limite. Use até 720p: 1280 × 720 com a imagem deitada ou 720 × 1280 com a imagem em pé. Girar um vídeo Full HD não reduz a resolução; reduza a resolução fora do app.")
     if not math.isfinite(fps) or not SAMPLE_HZ <= fps <= MAX_FPS:
         raise VideoError("Use vídeo de taxa constante entre 5 e 60 quadros por segundo.")
+    if frames <= 0:
+        raise VideoError("Não foi possível ler a duração do vídeo. Escolha um MP4 com metadados e quadros válidos.")
     duration = frames / fps
-    if frames <= 0 or frames >= MAX_DECODE_FRAMES or not MIN_SECONDS <= duration <= MAX_SECONDS:
-        raise VideoError("Use um clipe completo de 2 a 15 segundos.")
+    measured = f"{duration:.2f}".replace(".", ",")
+    if duration < MIN_SECONDS:
+        raise VideoError(f"Duração de {measured} s ({width} × {height} pixels). O mínimo é 2 segundos. Envie um trecho completo de 2 a 15 segundos, na mesma fase da referência.")
+    if frames >= MAX_DECODE_FRAMES or duration > MAX_SECONDS:
+        raise VideoError(f"Duração de {measured} s ({width} × {height} pixels). Use um clipe completo de 2 a 15 segundos, na mesma fase da referência. Recorte o trecho antes de enviar; nenhum corte automático foi feito.")
+    if width <= 0 or height <= 0 or max(width, height) > MAX_SIDE or width * height > MAX_PIXELS:
+        raise VideoError(f"Resolução de {width} × {height} pixels fora do limite. Use até 720p: 1280 × 720 com a imagem deitada ou 720 × 1280 com a imagem em pé. Girar um vídeo Full HD não reduz a resolução; reduza a resolução fora do app.")
     return {"width": width, "height": height, "fps": fps, "frames": frames, "duration_seconds": duration}
 
 
@@ -292,7 +297,9 @@ def compare(reference: dict, observed: dict, options: Options):
     rmeta, ometa = reference["metadata"], observed["metadata"]
     duration_delta = ometa["duration_seconds"] - rmeta["duration_seconds"]
     if abs(duration_delta) > 0.5:
-        raise VideoError("Clipes diferem mais de 0,5 s. Recorte e alinhe o mesmo movimento antes de comparar.")
+        observed_seconds = f"{ometa['duration_seconds']:.2f}".replace(".", ",")
+        reference_seconds = f"{rmeta['duration_seconds']:.2f}".replace(".", ",")
+        raise VideoError(f"Vídeo observado: {observed_seconds} s; referência: {reference_seconds} s. Clipes diferem mais de 0,5 s. Use o mesmo trecho e a mesma fase do movimento; nenhum corte automático foi feito.")
     ref, obs = reference["samples"], observed["samples"]
     if not ref or not obs:
         raise VideoError("Sem amostras decodificadas para comparar.")
@@ -374,7 +381,7 @@ def analyze_pair(reference_bytes: bytes, observed_bytes: bytes, model_path: Path
     if separate:
         verify_worker_python(executable)
     worker = Path(__file__).with_name("video_movimento_worker.py")
-    results = []
+    results = {}
     with tempfile.TemporaryDirectory(prefix="video-local-") as directory:
         root = Path(directory)
         # Cópia pequena verificada: evita mudanças no modelo entre validação e inferência.
@@ -382,7 +389,7 @@ def analyze_pair(reference_bytes: bytes, observed_bytes: bytes, model_path: Path
         local_model.write_bytes(Path(model_path).read_bytes())
         verify_model(local_model)
         (root / "options.json").write_text(json.dumps(asdict(options)), encoding="utf-8")
-        for tag, data in (("reference", reference_bytes), ("observed", observed_bytes)):
+        for tag, data in (("observed", observed_bytes), ("reference", reference_bytes)):
             (root / "input.mp4").write_bytes(data)
             output = root / "result.json"
             output.unlink(missing_ok=True)
@@ -403,12 +410,13 @@ def analyze_pair(reference_bytes: bytes, observed_bytes: bytes, model_path: Path
             except (ValueError, OSError) as exc:
                 raise VideoError("Resposta do processo de vídeo inválida.") from exc
             if done.returncode != 0 or "error" in decoded:
-                raise VideoError(decoded.get("error", "Falha na análise local de vídeo."))
-            results.append(decoded)
-        report = compare(results[0], results[1], options)
+                label = "Vídeo observado" if tag == "observed" else "Referência"
+                raise VideoError(label + ": " + decoded.get("error", "Falha na análise local de vídeo."))
+            results[tag] = decoded
+        report = compare(results["reference"], results["observed"], options)
         report["reference_sha256"] = hashlib.sha256(reference_bytes).hexdigest()
         report["observed_sha256"] = hashlib.sha256(observed_bytes).hexdigest()
         report["same_input_control"] = report["reference_sha256"] == report["observed_sha256"]
-        report["runtime"] = results[0].get("runtime", {})
+        report["runtime"] = results["reference"].get("runtime", {})
         report["runtime"]["interpreter_mode"] = "separate" if separate else "current"
         return report

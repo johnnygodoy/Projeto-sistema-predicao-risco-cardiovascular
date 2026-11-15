@@ -79,6 +79,7 @@ def main():
         disabled=setup_error is not None,
         help="De 2 a 15 s, até 720p (imagem deitada ou em pé), taxa constante de 5–60 quadros/s. Uma pessoa e braço direito visível, na mesma fase da referência. Reprodução somente após validação completa.",
     )
+    st.sidebar.caption("Máximo: 15 segundos e 20 MiB. Se exceder, recorte o mesmo trecho da referência antes de enviar. Sem corte automático.")
     st.sidebar.caption("Processamento local, sem enviar a APIs. Arquivos temporários são removidos ao terminar a análise.")
     data, upload_error = None, None
     try:
@@ -131,13 +132,17 @@ def main():
             st.caption("Cabeçalho MP4 reconhecido. Clique em Analisar vídeo para verificar o formato, a duração e os movimentos. O player aparecerá após essa validação.")
         return
 
-    st.subheader("Prévia do arquivo validado")
     metadata = report["observed_metadata"]
+    preview_allowed = metadata.get("browser_preview_allowed") is True
+    st.subheader("Prévia do arquivo validado" if preview_allowed else "Arquivo analisado")
     a, b, c = st.columns(3)
     a.metric("Duração", f"{metadata['duration_seconds']:.2f} s")
     b.metric("Resolução", f"{metadata['width']} × {metadata['height']}")
     c.metric("Quadros/s", f"{metadata['fps']:g}")
-    st.video(data, format="video/mp4")  # Somente após decodificação/validação completa dos dois clipes.
+    if preview_allowed:
+        st.video(data, format="video/mp4")  # Decodificação completa + H.264/yuv420p identificado.
+    else:
+        st.caption("Este formato foi analisado, mas não será exibido no player. A prévia requer MP4/H.264 com cor yuv420p.")
     st.subheader("Relatório da comparação")
     if report["status"] != "analisavel":
         st.warning(f"Não foi possível comparar com confiança: {report['valid_pairs']} pares válidos e {report['valid_coverage']:.0%} de cobertura. São necessários ao menos 10 pares e 80%. Verifique se há uma só pessoa e se os pontos do braço/tronco estão visíveis. Isso não significa ausência de desvios.")

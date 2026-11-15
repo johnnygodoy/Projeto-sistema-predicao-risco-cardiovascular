@@ -22,7 +22,7 @@ def clip(angle=90, seconds=3.0, invalid=()):
         samples.append({"time_seconds": round(index / 5, 6),
                         "angle_degrees": None if index in invalid else angle,
                         "quality_min": 0.95, "reason": "sem_pose" if index in invalid else None})
-    return {"metadata": {"width": 640, "height": 480, "fps": 25, "frames": round(seconds * 25), "duration_seconds": seconds}, "samples": samples}
+    return {"metadata": {"width": 640, "height": 480, "fps": 25, "frames": round(seconds * 25), "duration_seconds": seconds, "browser_preview_allowed": True}, "samples": samples}
 
 
 class ValidationTests(unittest.TestCase):
@@ -44,11 +44,30 @@ class ValidationTests(unittest.TestCase):
             with self.assertRaises(video.VideoError):
                 options.validate()
 
-    def test_full_hd_and_long_source_still_rejected(self):
-        with self.assertRaisesRegex(video.VideoError, "1280"):
-            video.validate_metadata({"width": 1920, "height": 1080, "fps": 30, "frames": 1304})
-        with self.assertRaisesRegex(video.VideoError, "2 a 15"):
-            video.validate_metadata({"width": 1280, "height": 720, "fps": 30, "frames": 1304})
+    def test_long_duration_reported_before_resolution_and_limits_unchanged(self):
+        with self.assertRaisesRegex(video.VideoError, "43,47 s.*1080 × 1920") as error:
+            video.validate_metadata({"width": 1080, "height": 1920, "fps": 30, "frames": 1304})
+        self.assertIn("2 a 15 segundos", str(error.exception))
+        self.assertIn("nenhum corte automático", str(error.exception))
+        with self.assertRaisesRegex(video.VideoError, "1920 × 1080.*720p"):
+            video.validate_metadata({"width": 1920, "height": 1080, "fps": 30, "frames": 90})
+        self.assertEqual(video.MAX_SIDE,1280)
+        self.assertEqual(video.MAX_PIXELS,1280*720)
+
+    def test_short_duration_does_not_suggest_cutting(self):
+        with self.assertRaises(video.VideoError) as error:
+            video.validate_metadata({'width':640,'height':480,'fps':30,'frames':30})
+        self.assertIn('Duração de 1,00 s',str(error.exception))
+        self.assertIn('mínimo é 2 segundos',str(error.exception))
+        self.assertNotIn('Recorte',str(error.exception))
+
+    def test_zero_or_negative_frames_do_not_report_false_duration(self):
+        for frames in (0,-1):
+            with self.assertRaises(video.VideoError) as error:
+                video.validate_metadata({'width':640,'height':480,'fps':30,'frames':frames})
+            self.assertIn('Não foi possível ler a duração',str(error.exception))
+            self.assertNotIn('Recorte',str(error.exception))
+            self.assertNotIn('Duração de',str(error.exception))
 
     def test_model_missing_size_and_digest(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -224,6 +243,34 @@ class ProcessTests(unittest.TestCase):
         self.assertEqual(report["reference_sha256"], report["observed_sha256"])
         self.assertTrue(report["same_input_control"])
         self.assertTrue(all(not path.exists() for path in directories))
+
+    def test_observed_is_first_and_failure_does_not_analyze_reference(self):
+        seen=[]
+        observed=MP4_HEADER+b'observed';reference=MP4_HEADER+b'reference'
+        def run(args,**kwargs):
+            root=Path(args[-1]);seen.append((root/'input.mp4').read_bytes())
+            (root/'result.json').write_text(json.dumps({'error':'Duração de 43,47 s.'}))
+            return SimpleNamespace(returncode=1)
+        with tempfile.TemporaryDirectory() as directory:
+            model=Path(directory)/'model.task';model.write_bytes(b'test')
+            with patch.object(video,'verify_model'),patch.object(video.subprocess,'run',side_effect=run):
+                with self.assertRaisesRegex(video.VideoError,'Vídeo observado: Duração de 43,47 s'):
+                    video.analyze_pair(reference,observed,model)
+        self.assertEqual(seen,[observed])
+
+    def test_reference_observed_roles_preserved_after_reordering(self):
+        seen=[];observed=MP4_HEADER+b'observed';reference=MP4_HEADER+b'reference'
+        def run(args,**kwargs):
+            root=Path(args[-1]);data=(root/'input.mp4').read_bytes();seen.append(data)
+            (root/'result.json').write_text(json.dumps(clip(125 if data==observed else 90)))
+            return SimpleNamespace(returncode=0)
+        with tempfile.TemporaryDirectory() as directory:
+            model=Path(directory)/'model.task';model.write_bytes(b'test')
+            with patch.object(video,'verify_model'),patch.object(video.subprocess,'run',side_effect=run):
+                report=video.analyze_pair(reference,observed,model)
+        self.assertEqual(seen,[observed,reference])
+        self.assertEqual(report['comparisons'][0]['reference_angle'],90)
+        self.assertEqual(report['comparisons'][0]['observed_angle'],125)
 
     def test_worker_error_does_not_report_success(self):
         def run(args, **kwargs):

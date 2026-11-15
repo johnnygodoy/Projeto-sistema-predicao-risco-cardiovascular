@@ -55,6 +55,8 @@ class PageTests(unittest.TestCase):
             self.assertTrue(app.sidebar.button(key='_vid_run').proto.use_container_width)
             self.assertEqual(len(app.main.button),0)
             self.assertIn('720p',app.sidebar.get('file_uploader')[0].proto.help)
+            self.assertTrue(any('Máximo: 15 segundos e 20 MiB' in x.value for x in app.sidebar.caption))
+            self.assertTrue(any('recorte o mesmo trecho' in x.value for x in app.sidebar.caption))
             self.assertTrue(app.button(key='_vid_run').disabled)
             self.assertEqual(len(app.slider)+len(app.selectbox)+len(app.checkbox)+len(app.text_input),0)
             self.assertIn('Elevação lateral do braço direito',self.text(app))
@@ -230,6 +232,15 @@ class PageTests(unittest.TestCase):
                 self.assertIn(limitation,[x.value for x in details.caption])
             self.assertIn('Tempos no vídeo observado. Comparação 2D com a referência, sem avaliação clínica.',self.text(app))
             self.assertIn('De 0.00 s a 2.80 s',self.text(app))
+
+    def test_unknown_or_yuv444_pixel_format_has_report_but_no_player(self):
+        for flag in (False,None):
+            report=self.report();report['observed_metadata']['browser_preview_allowed']=flag
+            with self.upload(),patch.object(video,'analyze_pair',return_value=report):
+                app=self.page();app.button(key='_vid_run').click().run()
+                self.assertEqual(len(app.get('video')),0)
+                self.assertEqual(len(app.get('download_button')),1)
+                self.assertIn('não será exibido no player',self.text(app))
 
     def test_native_navigation_and_clean_copy(self):
         from streamlit.source_util import get_pages
