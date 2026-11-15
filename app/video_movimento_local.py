@@ -208,7 +208,7 @@ def validate_metadata(meta: dict):
     except (TypeError, ValueError, KeyError, OverflowError) as exc:
         raise VideoError("Metadados do vídeo inválidos.") from exc
     if width <= 0 or height <= 0 or max(width, height) > MAX_SIDE or width * height > MAX_PIXELS:
-        raise VideoError("Use até 1280 × 720 pixels, ou 720 × 1280 na vertical.")
+        raise VideoError("Resolução inválida ou acima do limite. Use até 720p: 1280 × 720 com a imagem deitada ou 720 × 1280 com a imagem em pé. Girar um vídeo Full HD não reduz a resolução; reduza a resolução fora do app.")
     if not math.isfinite(fps) or not SAMPLE_HZ <= fps <= MAX_FPS:
         raise VideoError("Use vídeo de taxa constante entre 5 e 60 quadros por segundo.")
     duration = frames / fps

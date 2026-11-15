@@ -38,16 +38,23 @@ class PageTests(unittest.TestCase):
         app=AppTest.from_file(str(ROOT/'app/pages/4_Video_Movimento_Local.py'),default_timeout=10).run()
         self.assertFalse(app.exception);return app
     def upload(self,value=None):
-        return patch('streamlit.file_uploader',return_value=Upload(MP4_HEADER+b'observed') if value is None else value)
+        return patch('streamlit.delta_generator.DeltaGenerator.file_uploader',return_value=Upload(MP4_HEADER+b'observed') if value is None else value)
     def report(self,angle=125,invalid=()):return video.compare(clip(),clip(angle,invalid=invalid),video.Options(joint='shoulder'))
-    def text(self,app):return ' '.join(str(x.value) for kind in ('title','subheader','caption','markdown','info','warning','error') for x in app.get(kind))
+    def text(self,app):return ' '.join(str(x.value) for kind in ('title','header','subheader','caption','markdown','info','warning','error') for x in app.get(kind))
 
     def test_single_upload_fixed_scope_and_no_decode_on_selection(self):
         with patch.object(video,'analyze_pair') as analyze:
             app=self.page()
             self.assertEqual(len(app.get('file_uploader')),1)
-            self.assertEqual(len(app.button),1)
-            self.assertEqual(app.get('file_uploader')[0].proto.label,'Vídeo observado')
+            self.assertEqual(len(app.button),2)
+            self.assertEqual(app.sidebar.get('file_uploader')[0].proto.label,'Importar MP4 (até 15 s / 20 MiB)')
+            self.assertEqual(len(app.main.get('file_uploader')),0)
+            self.assertEqual([x.value for x in app.sidebar.header],['Entrada de vídeo'])
+            self.assertEqual(app.sidebar.button(key='_vid_clear').label,'Limpar vídeo e resultados')
+            self.assertEqual(app.sidebar.button(key='_vid_run').proto.type,'primary')
+            self.assertTrue(app.sidebar.button(key='_vid_run').proto.use_container_width)
+            self.assertEqual(len(app.main.button),0)
+            self.assertIn('720p',app.sidebar.get('file_uploader')[0].proto.help)
             self.assertTrue(app.button(key='_vid_run').disabled)
             self.assertEqual(len(app.slider)+len(app.selectbox)+len(app.checkbox)+len(app.text_input),0)
             self.assertIn('Elevação lateral do braço direito',self.text(app))
@@ -55,6 +62,9 @@ class PageTests(unittest.TestCase):
             with self.upload():
                 app.run();self.assertFalse(app.button(key='_vid_run').disabled)
                 self.assertEqual(len(app.get('video')),0)
+                self.assertIn('Cabeçalho MP4 reconhecido',self.text(app))
+                self.assertNotIn('Prévia do arquivo validado',self.text(app))
+                self.assertEqual(len(app.metric),0)
             analyze.assert_not_called()
 
     def test_missing_model_reference_or_worker_fail_closed(self):
@@ -77,6 +87,9 @@ class PageTests(unittest.TestCase):
             self.assertIn('De 0.00 s a 2.80 s',self.text(app))
             self.assertIn('35.0°',self.text(app))
             self.assertEqual(len(app.get('video')),1)
+            self.assertEqual(len(app.sidebar.get('video')),0)
+            self.assertEqual([x.label for x in app.metric],['Duração','Resolução','Quadros/s'])
+            self.assertIn('Prévia do arquivo validado',self.text(app))
             self.assertEqual(len(app.get('download_button')),1)
             self.assertEqual(app.session_state['_vid_result']['workflow']['reference_source'],'configured_local')
             self.assertFalse(app.session_state['_vid_result']['workflow']['automatic_exercise_recognition'])
@@ -100,7 +113,7 @@ class PageTests(unittest.TestCase):
     def test_remove_upload_and_server_config_change_clear(self):
         with self.upload(),patch.object(video,'analyze_pair',return_value=self.report()):
             app=self.page();app.button(key='_vid_run').click().run()
-            with patch('streamlit.file_uploader',return_value=None):
+            with patch('streamlit.delta_generator.DeltaGenerator.file_uploader',return_value=None):
                 app.run();self.assertEqual(len(app.get('video')),0)
                 self.assertTrue(app.button(key='_vid_run').disabled)
             app.run();app.button(key='_vid_run').click().run()
@@ -157,7 +170,66 @@ class PageTests(unittest.TestCase):
         for setting,value in (('server.address','0.0.0.0'),('server.maxUploadSize',200)):
             with patch('streamlit.get_option',side_effect=lambda name: value if name==setting else original(name)):
                 app=self.page();self.assertEqual(len(app.get('file_uploader')),0)
-                self.assertEqual(len(app.button),0)
+                self.assertEqual(len(app.button),1)
+                self.assertEqual(app.button[0].key,'_vid_clear')
+
+    def test_clear_discards_upload_preview_report_and_errors(self):
+        def selected_upload(*args, **kwargs):
+            return Upload(MP4_HEADER+b'observed') if kwargs['key']=='_vid_file_0' else None
+        with patch('streamlit.delta_generator.DeltaGenerator.file_uploader',side_effect=selected_upload),patch.object(video,'analyze_pair',return_value=self.report()) as analyze:
+            app=self.page();app.button(key='_vid_run').click().run()
+            self.assertEqual(len(app.get('video')),1)
+            app.button(key='_vid_clear').click().run()
+            self.assertFalse(app.exception)
+            self.assertEqual(app.session_state['_vid_upload_generation'],1)
+            self.assertEqual(len(app.get('video')),0)
+            self.assertEqual(len(app.get('download_button')),0)
+            self.assertTrue(app.button(key='_vid_run').disabled)
+            self.assertEqual(len(app.error),0)
+            self.assertEqual(analyze.call_count,1)
+            app.button(key='_vid_clear').click().run()
+            self.assertFalse(app.exception)
+            self.assertEqual(app.session_state['_vid_upload_generation'],2)
+            self.assertTrue(app.button(key='_vid_run').disabled)
+
+    def test_failed_retry_clears_old_result_and_error_persists_until_change(self):
+        with self.upload(),patch.object(video,'analyze_pair',side_effect=[self.report(),video.VideoError('Duração inválida.')]) as analyze:
+            app=self.page();app.button(key='_vid_run').click().run()
+            app.button(key='_vid_run').click().run()
+            self.assertEqual(len(app.error),1)
+            self.assertEqual(len(app.get('video')),0)
+            self.assertEqual(len(app.get('download_button')),0)
+            app.run();self.assertEqual(len(app.error),1)
+            self.assertEqual(analyze.call_count,2)
+            with self.upload(Upload(MP4_HEADER+b'replacement')):
+                app.run();self.assertEqual(len(app.error),0)
+                self.assertIn('Cabeçalho MP4 reconhecido',self.text(app))
+                self.assertEqual(len(app.get('video')),0)
+
+    def test_orientation_help_and_resolution_error_do_not_preview(self):
+        try:
+            video.validate_metadata({'width':1920,'height':1080,'fps':30,'frames':90})
+        except video.VideoError as error:
+            message=str(error)
+        self.assertIn('imagem deitada',message)
+        self.assertIn('imagem em pé',message)
+        self.assertIn('Girar um vídeo Full HD não reduz',message)
+        with self.upload(),patch.object(video,'analyze_pair',side_effect=video.VideoError(message)):
+            app=self.page();app.button(key='_vid_run').click().run()
+            self.assertIn(message,self.text(app))
+            self.assertEqual(len(app.get('video')),0)
+            self.assertIn('Formato e preparação local',[x.label for x in app.expander])
+
+    def test_methodology_remains_collapsed_below_plain_report(self):
+        report=self.report()
+        with self.upload(),patch.object(video,'analyze_pair',return_value=report):
+            app=self.page();app.button(key='_vid_run').click().run()
+            details=next(x for x in app.expander if x.label=='Detalhes e evidências')
+            self.assertFalse(details.proto.expanded)
+            for limitation in report['limitations']:
+                self.assertIn(limitation,[x.value for x in details.caption])
+            self.assertIn('Tempos no vídeo observado. Comparação 2D com a referência, sem avaliação clínica.',self.text(app))
+            self.assertIn('De 0.00 s a 2.80 s',self.text(app))
 
     def test_native_navigation_and_clean_copy(self):
         from streamlit.source_util import get_pages

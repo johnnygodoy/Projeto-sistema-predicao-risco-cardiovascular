@@ -25,6 +25,15 @@ OPTIONS = Options(joint="shoulder", side="right", tolerance_degrees=20.0,
 def discard_result():
     st.session_state.pop("_vid_result", None)
     st.session_state.pop("_vid_selection", None)
+    st.session_state.pop("_vid_error", None)
+
+
+def clear_video():
+    generation = st.session_state.get("_vid_upload_generation", 0) + 1
+    for name in list(st.session_state):
+        if name.startswith("_vid_"):
+            del st.session_state[name]
+    st.session_state["_vid_upload_generation"] = generation
 
 
 def main():
@@ -32,10 +41,15 @@ def main():
     render_navigation()
     st.title("🎥 Vídeo")
     st.caption("Uso acadêmico. Use apenas vídeos de teste autorizados, sem pacientes ou dados clínicos.")
+    st.sidebar.header("Entrada de vídeo")
+    st.sidebar.button("Limpar vídeo e resultados", key="_vid_clear", on_click=clear_video)
     st.subheader(EXERCISE)
-    st.write("Envie seu vídeo e clique em Analisar vídeo. A comparação usa a referência configurada no servidor local.")
-    st.info("Comece na mesma fase da referência, com câmera e enquadramento comparáveis. Uma pessoa, quadril, ombro e cotovelo direitos visíveis. O app não reconhece o exercício nem alinha fases automaticamente.")
-    st.caption("MP4 de 2 a 15 s, até 720p e 20 MiB, taxa constante de 5–60 fps. Não há conversão automática.")
+    st.caption("Envie o vídeo pela barra lateral e clique em Analisar vídeo. Comece na mesma fase da referência local.")
+    with st.expander("Formato e preparação local"):
+        st.write("MP4 de 2 a 15 s, até 20 MiB, taxa constante de 5–60 quadros/s. Use até 720p: 1280 × 720 com a imagem deitada ou 720 × 1280 com a imagem em pé. Girar um vídeo Full HD não reduz a resolução. Não há conversão automática.")
+        st.write("Grave uma pessoa, com quadril, ombro e cotovelo direitos visíveis. Use câmera e enquadramento comparáveis e comece na mesma fase da referência. O app não reconhece o exercício nem alinha fases automaticamente.")
+        st.write("Configure uma vez, fora desta tela, o modelo local de pose, o Python separado de vídeo e a referência autorizada. A referência padrão fica em models/video-reference/referencia-ombro-direito.mp4. Dependências, pesos e referência não são instalados pelo app.")
+        st.caption("O Streamlit recebe o upload antes da validação. O cabeçalho e o tamanho são conferidos primeiro; a reprodução só aparece após a validação completa ao analisar.")
     local = local_uploads_enabled(st.get_option("server.address"))
     upload_limit = st.get_option("server.maxUploadSize")
     limited = isinstance(upload_limit, (int, float)) and 0 < upload_limit <= 24
@@ -54,12 +68,18 @@ def main():
         setup_error = str(exc)
         discard_result()
     if setup_error:
-        st.warning("Configuração necessária antes de analisar. " + setup_error)
-        st.caption("Configure uma vez, fora desta tela: o modelo local de pose, o Python separado de vídeo e a referência autorizada. A referência padrão fica em models/video-reference/referencia-ombro-direito.mp4; ela deve mostrar este exercício na mesma fase inicial que será usada nos envios.")
+        st.warning(setup_error)
+        st.caption("Confira Formato e preparação local para habilitar a análise.")
     else:
-        st.caption("Referência local carregada. A validação completa de formato, duração e pose ocorre ao analisar.")
+        st.caption("Referência local carregada para este exercício.")
 
-    upload = st.file_uploader("Vídeo observado", type=["mp4"], key="_vid_file_observed", disabled=setup_error is not None)
+    generation = st.session_state.get("_vid_upload_generation", 0)
+    upload = st.sidebar.file_uploader(
+        "Importar MP4 (até 15 s / 20 MiB)", type=["mp4"], key=f"_vid_file_{generation}",
+        disabled=setup_error is not None,
+        help="De 2 a 15 s, até 720p (imagem deitada ou em pé), taxa constante de 5–60 quadros/s. Uma pessoa e braço direito visível, na mesma fase da referência. Reprodução somente após validação completa.",
+    )
+    st.sidebar.caption("Processamento local, sem enviar a APIs. Arquivos temporários são removidos ao terminar a análise.")
     data, upload_error = None, None
     try:
         if upload is not None and setup_error is None:
@@ -70,7 +90,6 @@ def main():
     except VideoError as exc:
         upload_error = str(exc)
         discard_result()
-        st.error(upload_error)
 
     config = "\0".join(os.environ.get(name, "") for name in (
         "FIAP_POSE_MODEL_PATH", "FIAP_VIDEO_PYTHON", "FIAP_VIDEO_REFERENCE_PATH"))
@@ -81,11 +100,15 @@ def main():
     )
     if selection != st.session_state.get("_vid_selection"):
         st.session_state.pop("_vid_result", None)
+        st.session_state.pop("_vid_error", None)
         st.session_state["_vid_selection"] = selection
     ready = data is not None and reference is not None and setup_error is None and upload_error is None
-    run = st.button("Analisar vídeo", key="_vid_run", disabled=not ready)
+    if upload_error:
+        st.session_state["_vid_error"] = upload_error
+    run = st.sidebar.button("Analisar vídeo", key="_vid_run", type="primary", use_container_width=True, disabled=not ready)
     if run and ready:
         st.session_state.pop("_vid_result", None)
+        st.session_state.pop("_vid_error", None)
         try:
             with st.spinner("Validando e comparando localmente (até 45 s por clipe)..."):
                 report = analyze_pair(reference, data, model, OPTIONS)
@@ -93,13 +116,29 @@ def main():
                                   "same_start_phase_required": True, "automatic_exercise_recognition": False}
             st.session_state["_vid_result"] = report
         except VideoError as exc:
-            st.error(str(exc))
+            st.session_state["_vid_error"] = str(exc)
+    if st.session_state.get("_vid_error"):
+        st.error(st.session_state["_vid_error"])
     report = st.session_state.get("_vid_result")
-    if not report or not ready:
+    if not ready:
+        if upload is None and setup_error is None:
+            st.info("Selecione um MP4 na barra lateral para analisar.")
+        return
+    if not report:
+        if not st.session_state.get("_vid_error"):
+            st.subheader("Arquivo recebido")
+            st.caption(f"Tamanho: {len(data) / (1024 * 1024):.2f} MiB · Identificação do conteúdo: {selection[0][:12]}.")
+            st.caption("Cabeçalho MP4 reconhecido. Clique em Analisar vídeo para verificar o formato, a duração e os movimentos. O player aparecerá após essa validação.")
         return
 
+    st.subheader("Prévia do arquivo validado")
+    metadata = report["observed_metadata"]
+    a, b, c = st.columns(3)
+    a.metric("Duração", f"{metadata['duration_seconds']:.2f} s")
+    b.metric("Resolução", f"{metadata['width']} × {metadata['height']}")
+    c.metric("Quadros/s", f"{metadata['fps']:g}")
+    st.video(data, format="video/mp4")  # Somente após decodificação/validação completa dos dois clipes.
     st.subheader("Relatório da comparação")
-    st.caption("Comparação com a referência local de elevação lateral do braço direito, na mesma fase. Mede o ângulo quadril–ombro–cotovelo no plano da imagem; não é avaliação clínica.")
     if report["status"] != "analisavel":
         st.warning(f"Não foi possível comparar com confiança: {report['valid_pairs']} pares válidos e {report['valid_coverage']:.0%} de cobertura. São necessários ao menos 10 pares e 80%. Verifique se há uma só pessoa e se os pontos do braço/tronco estão visíveis. Isso não significa ausência de desvios.")
     elif report["events"]:
@@ -110,8 +149,7 @@ def main():
         st.info("Nenhum intervalo ultrapassou os limites desta comparação. Isso não comprova que o exercício está correto ou seguro.")
     if report.get("same_input_control"):
         st.caption("O arquivo enviado é idêntico à referência: este é um controle de repetibilidade, não uma validação do exercício.")
-    st.caption("Tempos a partir do início do vídeo observado. A câmera, o ritmo e a mesma fase influenciam a comparação.")
-    st.video(data, format="video/mp4")  # Somente após decodificação/validação completa dos dois clipes.
+    st.caption("Tempos no vídeo observado. Comparação 2D com a referência, sem avaliação clínica.")
     with st.expander("Detalhes e evidências"):
         st.write(f"Pares válidos: {report['valid_pairs']}. Cobertura: {report['valid_coverage']:.0%}. Diferença de duração: {report['duration_delta_seconds']:+.2f} s.")
         st.caption("Parâmetros fixos: ombro direito, diferença >20°, intervalo amostrado ≥0,6 s, qualidade mínima 0,7 e 5 amostras/s. Sem sincronização automática ou interpolação de lacunas.")
