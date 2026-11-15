@@ -99,10 +99,10 @@ class ModelConfigurationTests(unittest.TestCase):
                 self.assertFalse(local_asr_setup_present(configured_model_dir()))
                 find.assert_not_called()
 
-    def test_only_project_whisper_directory_is_newly_ignored(self):
+    def test_only_optional_model_directories_are_ignored(self):
         ignore = (Path(__file__).resolve().parents[1] / ".gitignore").read_text()
         model_rules = [line for line in ignore.splitlines() if line and not line.startswith("#") and "model" in line]
-        self.assertEqual(model_rules, ["/models/whisper-tiny/"])
+        self.assertEqual(model_rules, ["/models/whisper-tiny/", "/models/pose-landmarker-lite/"])
 
 
 class WavTests(unittest.TestCase):

@@ -17,3 +17,7 @@ Thumbs.db
 
 # Pesos locais opcionais de transcrição (não afeta model/model.pkl)
 /models/whisper-tiny/
+
+# Peso e ambiente isolado de vídeo, sem afetar outros modelos
+/models/pose-landmarker-lite/
+/.venv-video/

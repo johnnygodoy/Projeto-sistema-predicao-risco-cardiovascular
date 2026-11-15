@@ -1,0 +1,10 @@
+# Somente no ambiente ISOLADO do worker de vídeo, nunca no venv do app.
+# Python 3.11 x64 no Windows; Python 3.12 usado nos testes Linux.
+mediapipe==0.10.21
+numpy==1.26.4
+opencv-contrib-python==4.11.0.86
+jax==0.4.38
+jaxlib==0.4.38
+protobuf==4.25.9
+# Nenhum Streamlit, PyArrow, PyAV ou inclusão de requirements.txt.
+# Instale apenas esta variante de cv2; sem opencv-python/headless adicionais.
