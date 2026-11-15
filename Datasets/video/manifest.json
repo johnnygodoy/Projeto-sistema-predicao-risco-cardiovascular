@@ -1,0 +1,176 @@
+{
+  "dataset": {
+    "title": "REHAB24-6: A multi-modal dataset of physical rehabilitation exercises",
+    "version": "v1",
+    "doi": "10.5281/zenodo.13305826",
+    "record": "https://zenodo.org/records/13305826",
+    "authors": [
+      "Andrej Černek",
+      "Jan Sedmidubsky",
+      "Petra Budikova",
+      "Miriama Jánošová",
+      "Lukáš Katzer",
+      "Michal Procházka"
+    ],
+    "license": "CC BY-NC 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-nc/4.0/",
+    "record_conditions": "Academic or nonprofit noncommercial research use; cite the associated paper.",
+    "paper": "Černek, A.; Sedmidubsky, J.; Budikova, P. REHAB24-6: Physical Therapy Dataset for Analyzing Pose Estimation Methods. SISAP, Springer, 2024.",
+    "consent_statement": "The official record says all ten participants consented to release the data publicly."
+  },
+  "sources": {
+    "PM012": {
+      "entry": "Ex1/PM_012-Camera17-30fps.mp4",
+      "bytes": 20580711,
+      "sha256": "0af4e251ad54c17434ab357b6d2304f24cf9cd4aba624caf69b75c50a196be0e",
+      "zip_crc32": "99bec477"
+    },
+    "PM039": {
+      "entry": "Ex1/PM_039-Camera17-30fps.mp4",
+      "bytes": 23698813,
+      "sha256": "becc9eae0729570cba09b4402bbd685ac688c12203fb02c75d313adc88e02f87",
+      "zip_crc32": "628c4cbe"
+    }
+  },
+  "annotation_files": {
+    "Segmentation.csv": {
+      "url": "https://zenodo.org/api/records/13305826/files/Segmentation.csv/content",
+      "verified_md5": "90b8fbd7445dd050bf27b17126c78fbe"
+    },
+    "Segmentation.txt": {
+      "url": "https://zenodo.org/api/records/13305826/files/Segmentation.txt/content",
+      "verified_md5": "5f2a5b886c6f794f03e1a8f642738c86"
+    }
+  },
+  "windows_encoder": "FFmpeg N-124716-g054dffd133-20260531",
+  "verification": "Exact Windows outputs were copied byte for byte and hashes/size verified at the destination. Newly encoded outputs may have different hashes.",
+  "transformation": "Temporal trim; proportional 1920x1080 to 1280x720 scale; CFR 30; H264 preset fast CRF18 yuv420p; no audio. Command used -map_metadata -1 to disable automatic global metadata copying; absence of all tags was not asserted. No spatial crop, brightness change, masks or interpolation.",
+  "frame_index_note": "Start inclusive, end exclusive, zero-based FFmpeg decoded frames. Author indexing base is not explicit; these cuts are common interior under zero/one-based readings.",
+  "clips": [
+    {
+      "name": "TESTE-TEC4-01-REFERENCIA-OMBRO-DIREITO-PM012-C17-4p8s.mp4",
+      "bytes": 1166956,
+      "sha256": "97dc98fa4df186d45b8f69fb58c7cfb807d838fa134ccedf310fce72b079a259",
+      "source": "PM012",
+      "repetition": 5,
+      "author_correctness_label": 1,
+      "extra_person_in_cam17": 0,
+      "lights_on": 0,
+      "ffmpeg_frames_start_inclusive_end_exclusive": [
+        891,
+        1035
+      ],
+      "frames": 144,
+      "duration_seconds": 4.8,
+      "filter": "trim=start_frame=891:end_frame=1035,setpts=PTS-STARTPTS,scale=1280:-2",
+      "format": {
+        "codec": "h264",
+        "pixel_format": "yuv420p",
+        "width": 1280,
+        "height": 720,
+        "fps": "30/1",
+        "audio": false
+      }
+    },
+    {
+      "name": "TESTE-TEC4-02-OBSERVADO-OMBRO-DIREITO-PM012-C17-4p8s.mp4",
+      "bytes": 1257659,
+      "sha256": "c017e11a763e3d448a032a7f7a9437419c1a770b6f60b8da20a80887deb3c511",
+      "source": "PM012",
+      "repetition": 9,
+      "author_correctness_label": 0,
+      "extra_person_in_cam17": 0,
+      "lights_on": 0,
+      "ffmpeg_frames_start_inclusive_end_exclusive": [
+        2071,
+        2215
+      ],
+      "frames": 144,
+      "duration_seconds": 4.8,
+      "filter": "trim=start_frame=2071:end_frame=2215,setpts=PTS-STARTPTS,scale=1280:-2",
+      "format": {
+        "codec": "h264",
+        "pixel_format": "yuv420p",
+        "width": 1280,
+        "height": 720,
+        "fps": "30/1",
+        "audio": false
+      }
+    },
+    {
+      "name": "TESTE-TEC4-03-PM039-C17-REP02.mp4",
+      "bytes": 824647,
+      "sha256": "cdf3f50170e7bc696f7ce98a82ccfa1b79c01b82b3732c1cdbdb94d7cbb391c0",
+      "source": "PM039",
+      "repetition": 2,
+      "author_correctness_label": 1,
+      "extra_person_in_cam17": 0,
+      "lights_on": 1,
+      "ffmpeg_frames_start_inclusive_end_exclusive": [
+        225,
+        370
+      ],
+      "frames": 145,
+      "duration_seconds": 4.833333333333333,
+      "filter": "trim=start_frame=225:end_frame=370,setpts=N/(30*TB),scale=1280:-2",
+      "format": {
+        "codec": "h264",
+        "pixel_format": "yuv420p",
+        "width": 1280,
+        "height": 720,
+        "fps": "30/1",
+        "audio": false
+      }
+    },
+    {
+      "name": "TESTE-TEC4-04-PM039-C17-REP08.mp4",
+      "bytes": 771399,
+      "sha256": "f3085f88540d31fddf3d595d87130f62ca4da226b92384bded02c5c6f0817b08",
+      "source": "PM039",
+      "repetition": 8,
+      "author_correctness_label": 0,
+      "extra_person_in_cam17": 0,
+      "lights_on": 1,
+      "ffmpeg_frames_start_inclusive_end_exclusive": [
+        1515,
+        1660
+      ],
+      "frames": 145,
+      "duration_seconds": 4.833333333333333,
+      "filter": "trim=start_frame=1515:end_frame=1660,setpts=N/(30*TB),scale=1280:-2",
+      "format": {
+        "codec": "h264",
+        "pixel_format": "yuv420p",
+        "width": 1280,
+        "height": 720,
+        "fps": "30/1",
+        "audio": false
+      }
+    },
+    {
+      "name": "TESTE-TEC4-05-PM012-C17-REP08.mp4",
+      "bytes": 1081909,
+      "sha256": "6a90ad9446c5332d4e3008fc9985addfc09ebf78fc7471933d27f081f36eb80b",
+      "source": "PM012",
+      "repetition": 8,
+      "author_correctness_label": 0,
+      "extra_person_in_cam17": 0,
+      "lights_on": 0,
+      "ffmpeg_frames_start_inclusive_end_exclusive": [
+        1936,
+        2070
+      ],
+      "frames": 134,
+      "duration_seconds": 4.466666666666667,
+      "filter": "trim=start_frame=1936:end_frame=2070,setpts=N/(30*TB),scale=1280:-2",
+      "format": {
+        "codec": "h264",
+        "pixel_format": "yuv420p",
+        "width": 1280,
+        "height": 720,
+        "fps": "30/1",
+        "audio": false
+      }
+    }
+  ]
+}

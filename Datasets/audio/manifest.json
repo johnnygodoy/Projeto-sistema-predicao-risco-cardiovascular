@@ -1,0 +1,103 @@
+{
+  "purpose": "Synthetic, fictional English ASR test and exact digital-silence control; not a clinical corpus.",
+  "generation": {
+    "engine": "Installed FFmpeg flite filter",
+    "voice": "builtin slt",
+    "text": "This is a fictional test. Yesterday I felt tired. I had no chest pain and no shortness of breath. Today I feel better.",
+    "source_kind": "Locally synthesized, not a patient recording or requested voice impersonation",
+    "license_urls": [
+      "https://github.com/festvox/flite/blob/master/COPYING",
+      "https://github.com/festvox/flite/blob/master/lang/cmu_us_slt/cmu_us_slt.c"
+    ],
+    "notice": "../licenses/FLITE-COPYING.txt"
+  },
+  "files": [
+    {
+      "name": "synthetic_fictional_en.wav",
+      "bytes": 236684,
+      "sha256": "2e626dd85110824a2bddfae2950d9e8f1e6f186502fb9b62f4abfa4f89dd040a",
+      "format": "WAV PCM signed 16-bit little-endian, mono, 16000Hz",
+      "frames": 118320,
+      "seconds": 7.395
+    },
+    {
+      "name": "silence_paired.wav",
+      "bytes": 236684,
+      "sha256": "ecf55a63149e0fde4779617b39f5c2768745ddef9d011dbf468620c3a238f1c7",
+      "format": "WAV PCM signed 16-bit little-endian, mono, 16000Hz",
+      "frames": 118320,
+      "seconds": 7.395
+    }
+  ],
+  "smoke": {
+    "commit": "f1ba9f1004478eccd4ab7ebd5d206760ec1ddc94",
+    "scope": "One synthetic English WAV and exact digital-silence control; no clinical validation.",
+    "dependencies": {
+      "faster-whisper": "1.2.1",
+      "ctranslate2": "4.9.0",
+      "numpy": "2.5.4",
+      "onnxruntime": "1.32.0"
+    },
+    "source_sha256": {
+      "audio_local.py": "663034b9703079150d0482afd1db658f61ac0a320a2da97f8b869783d1091fb5",
+      "audio_text.py": "bc20c09021bfd76fa55a080f589814440e6550d8b1d63ddbc0be8bacae570207"
+    },
+    "model": "Systran/faster-whisper-tiny",
+    "model_revision": "d90ca5fe260221311c53c58e660288d3deb8d356",
+    "network_attempts": [],
+    "synthetic_fictional_en.wav": {
+      "sha256": "2e626dd85110824a2bddfae2950d9e8f1e6f186502fb9b62f4abfa4f89dd040a",
+      "bytes": 236684,
+      "frames": 118320,
+      "seconds": 7.395,
+      "status": "completed",
+      "seconds_elapsed": 1.9865,
+      "transcript": "This is a fictional test. Yesterday I felt tired. I had no chest pain and no shortness of breath. Today I feel better.",
+      "vad_seconds": 7.395,
+      "segments": [
+        {
+          "start": 0.0,
+          "end": 7.14,
+          "text": "This is a fictional test. Yesterday I felt tired. I had no chest pain and no shortness of breath. Today I feel better."
+        }
+      ],
+      "term_rows": [
+        {
+          "Início (s)": 0.0,
+          "Fim (s)": 7.14,
+          "Termo do exemplo": "dor no peito",
+          "Expressão encontrada": "chest pain",
+          "Leitura lexical": "Menção com pista de negação",
+          "Trecho original": "This is a fictional test. Yesterday I felt tired. I had no chest pain and no shortness of breath. Today I feel better."
+        },
+        {
+          "Início (s)": 0.0,
+          "Fim (s)": 7.14,
+          "Termo do exemplo": "falta de ar",
+          "Expressão encontrada": "shortness of breath",
+          "Leitura lexical": "Menção com pista de negação",
+          "Trecho original": "This is a fictional test. Yesterday I felt tired. I had no chest pain and no shortness of breath. Today I feel better."
+        }
+      ],
+      "lexical_polarity": {
+        "positive": [
+          "better"
+        ],
+        "negative": [],
+        "excluded": [],
+        "score": 1.0
+      },
+      "reference_words": 23,
+      "word_edits": 0
+    },
+    "silence_paired.wav": {
+      "sha256": "ecf55a63149e0fde4779617b39f5c2768745ddef9d011dbf468620c3a238f1c7",
+      "bytes": 236684,
+      "frames": 118320,
+      "seconds": 7.395,
+      "status": "rejected",
+      "error": "PCM inteiramente zerado: a transcrição não foi executada.",
+      "seconds_elapsed": 0.0015
+    }
+  }
+}

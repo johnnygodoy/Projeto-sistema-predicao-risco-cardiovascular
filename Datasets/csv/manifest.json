@@ -1,0 +1,56 @@
+{
+  "kind": "Entirely synthetic, deterministic. Not BIDMC or any person record.",
+  "generator": "scripts/generate_test_csvs.py",
+  "tested_code_commit": "f1ba9f1004478eccd4ab7ebd5d206760ec1ddc94",
+  "results": {
+    "controle_sintetico_120.csv": {
+      "readings": 120,
+      "insufficient_history": 25,
+      "alerts": 0,
+      "alert_readings": []
+    },
+    "variacoes_sinteticas_120.csv": {
+      "readings": 120,
+      "insufficient_history": 25,
+      "alerts": 4,
+      "alert_readings": [
+        {
+          "timestamp": "2025-01-01T10:24:00+00:00",
+          "signal": "heart_rate",
+          "value": 108.0,
+          "score": 10.0
+        },
+        {
+          "timestamp": "2025-01-01T10:28:00+00:00",
+          "signal": "spo2",
+          "value": 90.0,
+          "score": 8.0
+        },
+        {
+          "timestamp": "2025-01-01T10:38:00+00:00",
+          "signal": "heart_rate",
+          "value": 116.0,
+          "score": 12.666666666666666
+        },
+        {
+          "timestamp": "2025-01-01T10:42:00+00:00",
+          "signal": "spo2",
+          "value": 89.0,
+          "score": 9.0
+        }
+      ]
+    }
+  },
+  "files": [
+    {
+      "name": "controle_sintetico_120.csv",
+      "bytes": 4756,
+      "sha256": "d69cfe9ba7d7df31a0aa974bea4dd9cbbfee1dad07dffc09b4ee884688442729"
+    },
+    {
+      "name": "variacoes_sinteticas_120.csv",
+      "bytes": 4758,
+      "sha256": "098ec6fbebbf7e869812fc4ad17274a53adf41fa9fe3c09455ecd43998577ddb"
+    }
+  ]
+}
