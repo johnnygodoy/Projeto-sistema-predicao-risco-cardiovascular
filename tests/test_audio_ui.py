@@ -12,8 +12,8 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "app"))
-from audio_local import AudioError, Segment, Transcript, validate_wav
-from test_audio_local import wav_bytes
+from audio_local import AudioError, MAX_BYTES, Segment, Transcript, validate_wav
+from test_audio_local import wav_bytes, add_metadata, riff_chunk
 
 try:
     from streamlit.testing.v1 import AppTest
@@ -82,7 +82,7 @@ class AudioPageTests(unittest.TestCase):
             self.assertTrue(any(item.value == "Uso acadêmico. Use apenas gravações de teste, sem dados identificáveis."
                                 for item in app.caption))
             command = next(item.value for item in app.code if item.value.startswith("ffmpeg "))
-            self.assertIn("ffmpeg -n -i trecho.wav", command)
+            self.assertIn("ffmpeg -n -i entrada.wav", command)
             self.assertNotIn(" -t ", command)
             self.assertNotIn(" -y", command)
 
@@ -146,7 +146,7 @@ class AudioPageTests(unittest.TestCase):
 
     def test_oversize_rejected_without_getvalue(self):
         class TooLarge:
-            size = 2 * 1024 * 1024 + 1
+            size = MAX_BYTES + 1
 
             def getvalue(self):
                 raise AssertionError("Oversize content must not be read")
@@ -156,11 +156,70 @@ class AudioPageTests(unittest.TestCase):
             self.assertEqual(len(app.error), 1)
             self.assertEqual(len(app.metric), 0)
 
+    def test_long_upload_preview_late_result_progress_and_replacement(self):
+        payload = wav_bytes(450)
+        result = Transcript((Segment(448, 449, "Late speech."),), "en", validate_wav(payload).fingerprint)
+
+        def run_long(data, model_dir, language, *, progress):
+            self.assertEqual(data, payload)
+            progress("loading", 0, 450)
+            progress("transcribing", 0, 450)
+            progress("segment", 449, 450)
+            progress("complete", 450, 450)
+            return result
+
+        with patch("streamlit.sidebar.file_uploader", return_value=Upload(payload)):
+            app = self.validate(self.app())
+            self.assertEqual(app.metric[0].value, "450.00 s")
+            self.assertTrue(any("Áudio longo" in item.value for item in app.info))
+            with patch("audio_local.transcribe_local", side_effect=run_long) as asr:
+                app.button(key="_audio_run").click().run()
+                asr.assert_called_once()
+            self.assertFalse(app.exception)
+            self.assertEqual(app.dataframe[0].value.iloc[0]["Início"], "07:28.000")
+            self.assertEqual(len(app.get("progress")), 0)
+        with patch("streamlit.sidebar.file_uploader", return_value=Upload(self.payload)):
+            app.run()
+            self.assertNotIn("_audio_result", app.session_state)
+            self.assertEqual(len(app.metric), 0)
+
+    def test_budget_error_clears_progress_and_no_partial_ui(self):
+        with patch("streamlit.sidebar.file_uploader", return_value=Upload(self.payload)):
+            app = self.validate(self.app())
+            with patch("audio_local.transcribe_local", side_effect=AudioError("O processamento excedeu o orçamento de 15 minutos. Resultado descartado.")):
+                app.button(key="_audio_run").click().run()
+            self.assertEqual(len(app.error), 1)
+            self.assertNotIn("_audio_result", app.session_state)
+            self.assertEqual(len(app.get("progress")), 0)
+            self.assertFalse(app.exception)
+
+    def test_no_detected_speech_is_explicit_not_neutral_sentiment(self):
+        empty = Transcript((), "en", validate_wav(self.payload).fingerprint, vad_seconds=0)
+        with patch("streamlit.sidebar.file_uploader", return_value=Upload(self.payload)):
+            app = self.validate(self.app())
+            with patch("audio_local.transcribe_local", return_value=empty):
+                app.button(key="_audio_run").click().run()
+            self.assertTrue(any("Nenhum trecho de fala detectado" in item.value for item in app.info))
+            self.assertFalse(any(item.value == "Termos no texto" for item in app.subheader))
+            self.assertEqual(len(app.dataframe), 0)
+            self.assertFalse(app.exception)
+
     def test_digital_silence_control_is_not_asr(self):
         with patch("streamlit.sidebar.file_uploader", return_value=Upload(wav_bytes(value=0))):
             app = self.validate(self.app())
             self.assertTrue(any("silêncio digital" in item.value for item in app.info))
             self.assertFalse(any(button.key == "_audio_run" for button in app.button))
+
+    def test_ffmpeg_metadata_removed_from_player_and_not_rendered(self):
+        marker = b"HIDDEN_METADATA_MARKER"
+        payload = add_metadata(self.payload, [riff_chunk(b"LIST", b"INFO" + riff_chunk(b"ICMT", marker))])
+        with patch("streamlit.sidebar.file_uploader", return_value=Upload(payload)):
+            app = self.validate(self.app())
+            self.assertEqual(app.session_state["_audio_preview"][1].payload, self.payload)
+            self.assertNotIn(marker, app.session_state["_audio_preview"][1].payload)
+            self.assertTrue(any("Metadados opcionais descartados" in item.value for item in app.caption))
+            visible = " ".join(str(item.value) for kind in ["caption", "info", "markdown", "error"] for item in app.get(kind))
+            self.assertNotIn(marker.decode(), visible)
 
     def test_missing_model_honest_error_with_no_fake_text(self):
         with patch("streamlit.sidebar.file_uploader", return_value=Upload(self.payload)):

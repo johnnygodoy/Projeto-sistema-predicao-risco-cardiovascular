@@ -33,6 +33,14 @@ def render_results(result):
     st.subheader("Transcrição local")
     st.caption(f"Motor: {result.engine}. Idioma selecionado: {result.language}. Tempos aproximados.")
     st.caption("Reconhecimento automático pode errar, omitir palavras ou gerar texto inexistente. Confira ouvindo o arquivo.")
+    if result.vad_seconds is not None:
+        st.caption(
+            f"Filtro local de fala: {result.vad_seconds:.2f} s retidos. "
+            "Falas baixas, curtas ou atípicas podem ser perdidas. Um segmento pode abranger pausas."
+        )
+    if result.vad_seconds == 0:
+        st.info("Nenhum trecho de fala detectado pelo filtro local. Isso não comprova ausência de fala.")
+        return
     if not result.segments:
         st.info("O modelo não retornou segmentos. Isso não comprova ausência de fala.")
         return
@@ -87,20 +95,22 @@ def main():
     language = "pt" if language_label == "Português" else "en"
     generation = st.session_state.get("_audio_upload_generation", 0)
     upload = st.sidebar.file_uploader(
-        "Importar WAV (até 60 s / 2 MiB)", type=["wav"], key=f"_audio_file_{generation}",
+        "Importar WAV (até 12 min / 24 MiB)", type=["wav"], key=f"_audio_file_{generation}",
         help="PCM16 mono a 16.000 Hz. O conteúdo é verificado antes de reproduzir ou transcrever.",
     )
     st.sidebar.caption("Processamento na memória desta sessão, sem gravar áudio/transcrição ou enviar a APIs.")
     with st.expander("Formato e preparação local"):
         st.write(
-            "WAV RIFF canônico: PCM16 mono, 16.000 Hz, 0,25–60 s, até 2 MiB, "
-            "somente blocos fmt e data. Arquivos comprimidos, estéreo, metadados e "
-            "cabeçalhos inconsistentes são rejeitados, sem conversão automática. "
+            "WAV RIFF canônico: PCM16 mono, 16.000 Hz, 0,25 s a 12 min, até 24 MiB, "
+            "um bloco fmt PCM de 16 bytes e um bloco data. Metadados LIST/INFO e "
+            "padding JUNK/PAD de até 64 KiB são validados e descartados. Arquivos "
+            "comprimidos, estéreo, blocos desconhecidos e cabeçalhos inconsistentes "
+            "são rejeitados, sem conversão automática. "
             "O Streamlit recebe o upload antes da nossa validação."
         )
         st.write("Se necessário, converta uma gravação de teste com seu FFmpeg local, fora do aplicativo:")
-        st.caption("Escolha antes um trecho com fala, de até 60 s. O comando só converte; não recorta nem sobrescreve arquivos existentes.")
-        st.code('ffmpeg -n -i trecho.wav -ac 1 -ar 16000 -c:a pcm_s16le -map_metadata -1 -fflags +bitexact audio_teste.wav', language="text")
+        st.caption("Gravações de até 12 min podem ser usadas inteiras. O comando só converte; não recorta nem sobrescreve arquivos existentes.")
+        st.code('ffmpeg -n -i entrada.wav -ac 1 -ar 16000 -c:a pcm_s16le -map_metadata -1 -fflags +bitexact audio_teste.wav', language="text")
         st.write(
             "Use faster-whisper no mesmo Python do Streamlit e pesos CTranslate2 já locais, "
             "incluindo model.bin, config.json e tokenizer.json. Recomenda-se tiny multilíngue "
@@ -111,7 +121,7 @@ def main():
     if upload is not None:
         if upload.size > MAX_BYTES:
             sync_selection(st.session_state, None)
-            st.error("Arquivo excede 2 MiB. Escolha um trecho menor.")
+            st.error("Arquivo excede 24 MiB. Escolha um trecho menor.")
             return
         payload = upload.getvalue()
     key = selection_key(payload, model_dir, language) if payload is not None else None
@@ -138,18 +148,46 @@ def main():
     b.metric("Formato", "PCM16 · mono")
     c.metric("Amostragem", "16.000 Hz")
     st.caption(f"Identificação do conteúdo: {sample.fingerprint[:12]}. A validação técnica não verifica a origem do áudio.")
+    if sample.metadata_discarded:
+        st.caption("Metadados opcionais descartados antes da reprodução e da transcrição.")
     st.audio(sample.payload, format="audio/wav")
     if sample.digital_silence:
         st.info("Todos os valores PCM são zero. Controle de silêncio digital; transcrição não executada.")
         return
+    if sample.seconds > 60:
+        st.info(
+            "Áudio longo: a transcrição local pode levar vários minutos e usar mais memória. "
+            "O arquivo inteiro será enviado ao motor local, sem corte automático."
+        )
+    st.sidebar.caption(
+        "Execução síncrona. Orçamento de 15 min verificado entre etapas; uma chamada "
+        "nativa em andamento pode ultrapassá-lo. Não há cancelamento imediato."
+    )
     if st.sidebar.button("Transcrever localmente", key="_audio_run", type="primary", use_container_width=True):
         st.session_state.pop("_audio_result", None)
         st.session_state.pop("_audio_error", None)
+        meter = st.progress(0.0, text="Carregando o modelo local…")
+
+        def update_progress(stage, position, total):
+            if stage == "loading":
+                text = "Carregando o modelo local…"
+            elif stage == "transcribing":
+                text = "Detectando fala e transcrevendo: aguardando o primeiro segmento…"
+            elif stage == "complete":
+                text = "Processamento concluído."
+            else:
+                text = f"Posição do último segmento retornado: {timestamp(position)} / {timestamp(total)}"
+            meter.progress(min(position / total, 1.0), text=text)
+
         try:
             with st.spinner("Reconhecendo fala no computador local…"):
-                st.session_state["_audio_result"] = (key, transcribe_local(payload, model_dir, language))
+                st.session_state["_audio_result"] = (
+                    key, transcribe_local(payload, model_dir, language, progress=update_progress)
+                )
         except AudioError as error:
             st.session_state["_audio_error"] = str(error)
+        finally:
+            meter.empty()
     if st.session_state.get("_audio_error"):
         st.error(st.session_state["_audio_error"])
     saved = st.session_state.get("_audio_result")
