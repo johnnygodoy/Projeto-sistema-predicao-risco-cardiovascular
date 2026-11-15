@@ -1,6 +1,5 @@
 """Optional academic local audio page; Streamlit 1.32 native widgets."""
 
-import os
 from pathlib import Path
 import sys
 
@@ -15,16 +14,16 @@ from navigation import render_navigation
 from local_inputs import LOCAL_COMMAND, local_uploads_enabled
 from audio_local import (
     AudioError, MAX_BYTES, selection_key, sync_selection, timestamp,
-    transcribe_local, validate_wav,
+    configured_model_dir, local_asr_setup_present, transcribe_local, validate_wav,
 )
 from audio_text import sentiment_summary, term_rows
 
 
 def clear_audio():
     generation = st.session_state.get("_audio_upload_generation", 0) + 1
-    # Keep local model/idiom controls; discard upload and all derived results.
+    # Keep the language control; discard upload and all derived results.
     for name in list(st.session_state):
-        if name.startswith("_audio_") and name not in {"_audio_model", "_audio_language"}:
+        if name.startswith("_audio_") and name != "_audio_language":
             del st.session_state[name]
     st.session_state["_audio_upload_generation"] = generation
 
@@ -86,11 +85,11 @@ def main():
         st.info("Importação desativada nesta execução. Inicie localmente, sem túnel ou proxy público:")
         st.code(LOCAL_COMMAND, language="text")
         return
-    model_dir = st.sidebar.text_input(
-        "Pasta local do modelo", value=os.environ.get("FIAP_WHISPER_MODEL_DIR", ""),
-        key="_audio_model", placeholder="C:\\modelos\\faster-whisper-tiny",
-        help="Pasta absoluta de pesos já obtidos. Não aceita URL ou nome como tiny; não baixa modelos.",
-    )
+    model_dir = configured_model_dir()
+    setup_present = local_asr_setup_present(model_dir)
+    if not setup_present:
+        st.session_state.pop("_audio_result", None)
+        st.sidebar.info("Transcrição indisponível: prepare o motor e os pesos locais. Veja Formato e preparação local.")
     language_label = st.sidebar.selectbox("Idioma do áudio", ["Português", "Inglês"], key="_audio_language")
     language = "pt" if language_label == "Português" else "en"
     generation = st.session_state.get("_audio_upload_generation", 0)
@@ -112,9 +111,10 @@ def main():
         st.caption("Gravações de até 12 min podem ser usadas inteiras. O comando só converte; não recorta nem sobrescreve arquivos existentes.")
         st.code('ffmpeg -n -i entrada.wav -ac 1 -ar 16000 -c:a pcm_s16le -map_metadata -1 -fflags +bitexact audio_teste.wav', language="text")
         st.write(
-            "Use faster-whisper no mesmo Python do Streamlit e pesos CTranslate2 já locais, "
-            "incluindo model.bin, config.json e tokenizer.json. Recomenda-se tiny multilíngue "
-            "para teste em Português; tiny.en é somente Inglês. Dependências e pesos não são instalados pelo app."
+            "O modelo é encontrado automaticamente em models/whisper-tiny na raiz do projeto. "
+            "Copie para lá os pesos locais já obtidos: model.bin, config.json e tokenizer.json. "
+            "Use faster-whisper no mesmo Python do Streamlit. Consulte docs/AUDIO_LOCAL.md "
+            "para a preparação sem sobrescrever arquivos. Dependências e pesos não são instalados pelo app."
         )
         st.code('python -m pip install "streamlit==1.32.0" "faster-whisper==1.2.1"\npython -m pip check', language="text")
     payload = None
@@ -163,7 +163,8 @@ def main():
         "Execução síncrona. Orçamento de 15 min verificado entre etapas; uma chamada "
         "nativa em andamento pode ultrapassá-lo. Não há cancelamento imediato."
     )
-    if st.sidebar.button("Transcrever localmente", key="_audio_run", type="primary", use_container_width=True):
+    if st.sidebar.button("Transcrever localmente", key="_audio_run", type="primary", use_container_width=True,
+                         disabled=not setup_present) and setup_present:
         st.session_state.pop("_audio_result", None)
         st.session_state.pop("_audio_error", None)
         meter = st.progress(0.0, text="Carregando o modelo local…")

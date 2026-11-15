@@ -3,8 +3,10 @@
 from dataclasses import dataclass
 import hashlib
 import importlib
+import importlib.util
 import json
 import math
+import os
 from pathlib import Path
 import re
 import struct
@@ -14,7 +16,8 @@ from typing import Callable, Optional
 MAX_BYTES = 24 * 1024 * 1024
 MAX_SECONDS = 12 * 60
 SAMPLE_RATE = 16000
-VERSION = "audio-local-v3-long-vad"
+VERSION = "audio-local-v4-project-model"
+DEFAULT_MODEL_DIR = Path(__file__).resolve().parents[1] / "models" / "whisper-tiny"
 MAX_SEGMENTS = 1000
 MAX_TEXT = 60000
 MAX_INFERENCE_SECONDS = 15 * 60
@@ -155,6 +158,25 @@ def validate_wav(payload: bytes) -> WavSample:
         struct.pack("<I", 16) + fmt_chunk + b"data" + struct.pack("<I", data_size) + pcm
     )
     return WavSample(canonical, pcm, frames, hashlib.sha256(payload).hexdigest(), bool(metadata_bytes))
+
+
+def configured_model_dir() -> str:
+    """Server-side setting only; the default is anchored to source, never cwd.
+
+    Resolution does not create directories, copy weights or download anything.
+    The optional environment override still goes through validate_model_dir.
+    """
+    return os.environ.get("FIAP_WHISPER_MODEL_DIR", "").strip() or str(DEFAULT_MODEL_DIR)
+
+
+def local_asr_setup_present(model_dir: str) -> bool:
+    """Lightweight presence check, not a load or compatibility test of the engine."""
+    try:
+        validate_model_dir(model_dir)
+        return all(importlib.util.find_spec(name) is not None
+                   for name in ("faster_whisper", "numpy", "onnxruntime"))
+    except (AudioError, ImportError, OSError, ValueError):
+        return False
 
 
 def validate_model_dir(value: str) -> Path:

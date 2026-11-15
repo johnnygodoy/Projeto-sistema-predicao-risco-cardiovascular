@@ -4,6 +4,7 @@ Native browser upload and genuine spoken-audio inference remain separate checks.
 """
 
 import io
+import os
 from pathlib import Path
 import sys
 import unicodedata
@@ -37,6 +38,9 @@ class AudioPageTests(unittest.TestCase):
         guard = patch("streamlit.get_option", side_effect=lambda name: "127.0.0.1" if name == "server.address" else original(name))
         guard.start()
         self.addCleanup(guard.stop)
+        setup_guard = patch("audio_local.local_asr_setup_present", return_value=True)
+        self.setup_mock = setup_guard.start()
+        self.addCleanup(setup_guard.stop)
         self.payload = wav_bytes()
         self.result = Transcript((Segment(0, 0.9, "Sem dor no peito. Estou bem."),), "pt", validate_wav(self.payload).fingerprint)
 
@@ -63,6 +67,7 @@ class AudioPageTests(unittest.TestCase):
     def test_initial_local_file_input_no_fabricated_results(self):
         app = self.app()
         self.assertEqual(len(app.get("file_uploader")), 1)
+        self.assertEqual(len(app.text_input), 0)
         self.assertEqual(len(app.metric), 0)
         self.assertFalse(any(item.value == "Transcrição local" for item in app.subheader))
         self.assertFalse(any(button.key == "_audio_run" for button in app.button))
@@ -221,16 +226,34 @@ class AudioPageTests(unittest.TestCase):
             visible = " ".join(str(item.value) for kind in ["caption", "info", "markdown", "error"] for item in app.get(kind))
             self.assertNotIn(marker.decode(), visible)
 
-    def test_missing_model_honest_error_with_no_fake_text(self):
+    def test_missing_setup_keeps_preview_and_disables_asr_without_path_input(self):
+        self.setup_mock.return_value = False
         with patch("streamlit.sidebar.file_uploader", return_value=Upload(self.payload)):
             app = self.validate(self.app())
-            app.text_input(key="_audio_model").set_value("/missing-audio-model").run()
-            self.validate(app)
-            app.button(key="_audio_run").click().run()
-            self.assertEqual(len(app.error), 1)
-            self.assertTrue("não encontrada" in app.error[0].value)
+            self.assertEqual(len(app.text_input), 0)
+            self.assertEqual(len(app.get("audio")), 1)
+            self.assertTrue(app.button(key="_audio_run").disabled)
+            setup_messages = [item.value for item in app.info if "Transcrição indisponível" in item.value]
+            self.assertEqual(len(setup_messages), 1)
+            with patch("audio_local.transcribe_local") as inference:
+                app.button(key="_audio_run").click().run()
+                inference.assert_not_called()
             self.assertNotIn("_audio_result", app.session_state)
             self.assertFalse(app.exception)
+
+    def test_setup_removed_clears_result_and_recovery_keeps_player(self):
+        with patch("streamlit.sidebar.file_uploader", return_value=Upload(self.payload)):
+            app = self.validate(self.app())
+            self.run_mock(app)
+            self.setup_mock.return_value = False
+            app.run()
+            self.assertNotIn("_audio_result", app.session_state)
+            self.assertEqual(len(app.get("audio")), 1)
+            self.assertTrue(app.button(key="_audio_run").disabled)
+            self.setup_mock.return_value = True
+            app.run()
+            self.assertFalse(app.button(key="_audio_run").disabled)
+            self.run_mock(app)
 
     def test_repeated_run_revalidation_clear_and_remove(self):
         with patch("streamlit.sidebar.file_uploader", return_value=Upload(self.payload)):
@@ -257,7 +280,8 @@ class AudioPageTests(unittest.TestCase):
         with patch("streamlit.sidebar.file_uploader", return_value=Upload(self.payload)):
             app = self.validate(self.app())
             self.run_mock(app)
-            app.text_input(key="_audio_model").set_value("/other-model").run()
+            with patch.dict(os.environ, {"FIAP_WHISPER_MODEL_DIR": "/other-model"}):
+                app.run()
             self.assertNotIn("_audio_result", app.session_state)
             self.assertEqual(len(app.metric), 0)
             self.validate(app)

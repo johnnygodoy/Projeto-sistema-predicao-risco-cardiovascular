@@ -10,8 +10,8 @@ ou dados de pacientes.
 - Python 3.10–3.12 e o ambiente virtual usado pelo projeto; ensaio realizado em 3.12.
 - Streamlit 1.32.0 e os requisitos públicos já instalados.
 - faster-whisper 1.2.1 opcional, no **mesmo Python do Streamlit**.
-- Pesos Whisper/CTranslate2 de fonte confiável em pasta local: `model.bin`,
-  `config.json` e `tokenizer.json`. O app não baixa modelos.
+- Pesos Whisper/CTranslate2 de fonte confiável em `models/whisper-tiny` na raiz
+  local do projeto: `model.bin`, `config.json` e `tokenizer.json`. O app não baixa modelos.
 - WAV RIFF, PCM16 mono, 16.000 Hz, de 0,25 segundo a **12 minutos**, até **24 MiB**.
   Exatamente um bloco `fmt ` PCM de 16 bytes antes de um bloco `data`.
 - Metadados opcionais `LIST/INFO`, `JUNK` e `PAD ` são aceitos até 64 KiB somados,
@@ -57,27 +57,64 @@ uma venv Linux isolada com NumPy 1.26.4 e PyArrow 15.0.2. Isso não verifica nem
 Windows. Não é preciso copiar código de outro projeto: um ambiente compatível e
 pesos locais existentes podem ser reutilizados diretamente.
 
-## Pesos locais
+## Pesos locais dentro do projeto
 
-Se já possui os pesos compatíveis, informe sua pasta absoluta na barra lateral.
-Não baixe de novo. Também pode configurar a pasta antes de iniciar:
+Não é mais necessário escolher a pasta na tela. O padrão é
+`models/whisper-tiny`, resolvido pela localização do código, independentemente da
+pasta de onde o Streamlit for iniciado. É uma pasta **local**, ignorada pelo Git.
+O modelo cardiovascular já existente em `model/model.pkl` não é alterado nem ignorado.
+
+Se os pesos já estão no destino, não copie novamente. Caso estejam em outra pasta
+local, na raiz do projeto copie apenas os arquivos conhecidos com o roteiro abaixo.
+Ele verifica os arquivos obrigatórios antes de criar o destino, recusa um destino
+já existente e nunca sobrescreve arquivos. Não usa curingas nem baixa arquivos.
+
+```powershell
+$origem = "C:\modelos\faster-whisper-tiny"  # pasta local que já contém seus pesos
+$destino = Join-Path (Get-Location) "models\whisper-tiny"
+if (-not (Test-Path -LiteralPath "app\audio_local.py" -PathType Leaf)) { throw "Execute na raiz do projeto." }
+$obrigatorios = @("model.bin", "config.json", "tokenizer.json")
+$opcionais = @("vocabulary.txt", "preprocessor_config.json")
+foreach ($nome in $obrigatorios) {
+    $arquivo = Join-Path $origem $nome
+    if (-not (Test-Path -LiteralPath $arquivo -PathType Leaf)) { throw "Arquivo ausente: $nome" }
+    if ((Get-Item -LiteralPath $arquivo).Length -eq 0) { throw "Arquivo vazio: $nome" }
+}
+if (Test-Path -LiteralPath $destino) { throw "Destino já existe. Confira os arquivos; nada será sobrescrito." }
+$arquivos = @($obrigatorios) + @($opcionais | Where-Object { Test-Path -LiteralPath (Join-Path $origem $_) -PathType Leaf })
+[System.IO.Directory]::CreateDirectory($destino) | Out-Null
+foreach ($nome in $arquivos) {
+    [System.IO.File]::Copy((Join-Path $origem $nome), (Join-Path $destino $nome), $false)
+}
+```
+
+Apenas esse roteiro manual copia arquivos. O aplicativo não cria a pasta, não move
+pesos e não escreve no disco. Não inclua os pesos no Git nem use `git add -f` nessa
+pasta. Se uma cópia falhar, o aplicativo continuará indisponível até a preparação
+ser concluída; não substitua arquivos de origem nem sobrescreva o destino às cegas.
+
+Para reutilizar outra pasta sem copiar, a configuração opcional **do servidor**
+continua disponível antes de iniciar o aplicativo:
 
 ```powershell
 $env:FIAP_WHISPER_MODEL_DIR = "C:\modelos\faster-whisper-tiny"
 ```
 
-**Somente se ainda não houver pesos:** obtenha o modelo oficial uma vez, fora do
-repositório do projeto. O comando abaixo faz download de cerca de 78 MB, sem
-executar inferência remota. Não é executado pelo aplicativo:
+Essa variável tem prioridade sobre o padrão. Para voltar à pasta do projeto,
+remova a variável na sessão PowerShell que iniciará o Streamlit:
 
 ```powershell
-$env:FIAP_WHISPER_MODEL_DIR = Join-Path $env:USERPROFILE "modelos\faster-whisper-tiny"
-python -c "import os; from huggingface_hub import snapshot_download; snapshot_download('Systran/faster-whisper-tiny', revision='d90ca5fe260221311c53c58e660288d3deb8d356', local_dir=os.environ['FIAP_WHISPER_MODEL_DIR'], allow_patterns=['model.bin','config.json','tokenizer.json','vocabulary.txt'], token=False)"
+Remove-Item Env:\FIAP_WHISPER_MODEL_DIR -ErrorAction SilentlyContinue
 ```
 
-Use tiny **multilíngue** para Português. `tiny.en` aceita apenas Inglês. O aplicativo
-exige pasta absoluta existente, nunca URL ou nome genérico de modelo. A falta do
-tokenizer também interrompe a execução para evitar fallback de download.
+O override exige pasta absoluta local existente; URL, caminho de rede e nome
+como `tiny` continuam recusados. Não existe campo de caminho na interface.
+
+Use tiny **multilíngue** para Português; `tiny.en` aceita apenas Inglês. Na ausência
+dos arquivos obrigatórios ou dos módulos opcionais, a página mostra uma única
+mensagem curta de preparação e desabilita a transcrição. Validar e ouvir continuam
+disponíveis. Essa verificação de presença não garante compatibilidade binária ou
+integridade dos pesos; o carregamento real continua validado no momento da inferência.
 
 ## Executar e usar
 
@@ -87,8 +124,12 @@ python -m streamlit run app/app.py --server.address=127.0.0.1 --browser.gatherUs
 
 1. Abra **🔊 Áudio** e importe o WAV de teste.
 2. Clique **Validar e ouvir**. Confira formato, duração e o áudio no player.
-3. Informe a pasta do modelo e selecione o idioma.
+3. Selecione o **idioma falado no áudio**; os pesos locais são encontrados automaticamente.
 4. Clique **Transcrever localmente**. Confira os segmentos ouvindo o arquivo.
+
+Para um áudio em inglês, selecione **Inglês**: a transcrição permanece em inglês.
+A escolha de Português não traduz o áudio. Tradução para português não faz parte
+desta página.
 
 O uploader só aparece com bind literal `127.0.0.1` ou `::1`. Não exponha a execução
 por túnel ou proxy público. O Streamlit recebe o arquivo antes da validação de
@@ -145,7 +186,7 @@ responder, interromper o servidor com Ctrl+C também encerra a sessão do aplica
 Durante a execução, a barra indica a **posição do último segmento retornado**, não
 uma medição de cobertura ou percentual de trabalho. Ela pode ficar parada em
 intervalos sem segmentos, inclusive silêncio. Somente ao concluir todo o gerador
-o resultado completo é guardado na sessão; mudanças de arquivo/idioma/modelo e
+o resultado completo é guardado na sessão; mudanças de arquivo/idioma/configuração do modelo e
 falhas continuam descartando os resultados antigos.
 
 ## O que é apresentado
@@ -162,13 +203,13 @@ score cardiovascular. Não há diarização, detector de doença, análise de to
 ou integração com vídeo nesta página.
 
 Áudio/transcrição ficam na memória da sessão, sem banco, arquivo temporário de mídia,
-cache compartilhado ou envio a APIs. Limpar, remover/trocar arquivo, mudar pasta/idioma,
+cache compartilhado ou envio a APIs. Limpar, remover/trocar arquivo, mudar a configuração do modelo ou o idioma,
 revalidar ou falhar em uma nova inferência descarta resultados antigos. Isso não
 promete apagamento seguro da memória do sistema nem de cópias feitas fora do app.
 
 ## Verificação
 
-A suíte completa passou em **110 testes** na integração, incluindo a amostra
+A suíte completa passou em **116 testes** na integração, incluindo a amostra
 oficial BIDMC externa. Ela inclui testes determinísticos, Streamlit 1.32 AppTest e, quando
 fornecida, a cópia oficial externa BIDMC. A amostra deve permanecer fora do projeto:
 
@@ -181,6 +222,8 @@ AppTest 1.32 não controla o upload nativo. Seus testes injetam o arquivo na fro
 do widget e usam dublês declarados para as saídas positivas de ASR. Eles verificam
 validação até 12 minutos, fala apenas no final, tempos absolutos, progresso,
 orçamento cooperativo, metadados válidos/inválidos, estados, navegação e falhas;
+também verificam a pasta padrão independente do diretório atual, override do servidor,
+ausência do campo de caminho e reprodução disponível sem o motor preparado;
 não demonstram qualidade do reconhecimento.
 
 **Smoke real separado:** faster-whisper 1.2.1 + tiny na revisão acima reconheceram

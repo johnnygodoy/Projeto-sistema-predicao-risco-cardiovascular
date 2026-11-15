@@ -2,6 +2,7 @@
 
 import importlib
 import io
+import os
 from pathlib import Path
 import struct
 import sys
@@ -15,6 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "app"))
 from audio_local import (
     AudioError, MAX_BYTES, MAX_SECONDS, MAX_SEGMENTS, MAX_TEXT, MAX_METADATA_BYTES,
     MAX_RIFF_CHUNKS, Segment, selection_key, sync_selection,
+    configured_model_dir, local_asr_setup_present,
     timestamp, transcribe_local, validate_model_dir, validate_wav,
 )
 from audio_text import sentiment_summary, term_rows
@@ -45,6 +47,62 @@ def add_metadata(payload, chunks, after_data=False):
     split = len(payload) if after_data else 36
     combined = payload[:split] + b"".join(chunks) + payload[split:]
     return edit_u32(combined, 4, len(combined) - 8)
+
+
+class ModelConfigurationTests(unittest.TestCase):
+    def test_default_model_is_source_relative_not_working_directory(self):
+        expected = Path(__file__).resolve().parents[1] / "models" / "whisper-tiny"
+        before = Path.cwd()
+        with tempfile.TemporaryDirectory() as other, patch.dict(os.environ, {}, clear=True):
+            try:
+                os.chdir(other)
+                self.assertEqual(configured_model_dir(), str(expected))
+            finally:
+                os.chdir(before)
+
+    def test_server_override_and_empty_fallback(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with patch.dict(os.environ, {"FIAP_WHISPER_MODEL_DIR": f" {directory} "}):
+                self.assertEqual(configured_model_dir(), directory)
+        for empty in ["", "   "]:
+            with patch.dict(os.environ, {"FIAP_WHISPER_MODEL_DIR": empty}):
+                self.assertEqual(Path(configured_model_dir()).name, "whisper-tiny")
+
+    def test_setup_check_is_read_only_does_not_import_optional_engine(self):
+        with tempfile.TemporaryDirectory() as directory:
+            for name in ["model.bin", "config.json", "tokenizer.json"]:
+                (Path(directory) / name).write_text("{}")
+            with patch("audio_local.importlib.util.find_spec", return_value=object()) as find, \
+                 patch("audio_local.importlib.import_module") as importer, \
+                 patch.object(Path, "mkdir") as mkdir, patch.object(Path, "write_bytes") as write:
+                self.assertTrue(local_asr_setup_present(directory))
+                self.assertEqual([call.args[0] for call in find.call_args_list],
+                                 ["faster_whisper", "numpy", "onnxruntime"])
+                importer.assert_not_called()
+                mkdir.assert_not_called()
+                write.assert_not_called()
+
+    def test_missing_runtime_or_model_is_unavailable_without_download(self):
+        with tempfile.TemporaryDirectory() as directory:
+            self.assertFalse(local_asr_setup_present(directory))
+            for name in ["model.bin", "config.json", "tokenizer.json"]:
+                (Path(directory) / name).write_text("{}")
+            for missing in ["faster_whisper", "numpy", "onnxruntime"]:
+                with self.subTest(missing=missing), \
+                     patch("audio_local.importlib.util.find_spec", side_effect=lambda name: None if name == missing else object()):
+                    self.assertFalse(local_asr_setup_present(directory))
+            with patch("audio_local.importlib.util.find_spec", side_effect=ImportError):
+                self.assertFalse(local_asr_setup_present(directory))
+        for invalid in ["tiny", "https://example.com/model", "//server/model", "\\\\server\\model"]:
+            with patch.dict(os.environ, {"FIAP_WHISPER_MODEL_DIR": invalid}), \
+                 patch("audio_local.importlib.util.find_spec") as find:
+                self.assertFalse(local_asr_setup_present(configured_model_dir()))
+                find.assert_not_called()
+
+    def test_only_project_whisper_directory_is_newly_ignored(self):
+        ignore = (Path(__file__).resolve().parents[1] / ".gitignore").read_text()
+        model_rules = [line for line in ignore.splitlines() if line and not line.startswith("#") and "model" in line]
+        self.assertEqual(model_rules, ["/models/whisper-tiny/"])
 
 
 class WavTests(unittest.TestCase):
