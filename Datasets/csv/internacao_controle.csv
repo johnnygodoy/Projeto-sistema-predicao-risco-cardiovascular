@@ -1,0 +1,9 @@
+episode_id,record_type,channel,timestamp,value,unit,plan_id,valid_from,valid_until,as_of,source
+EPISODIO-EXEMPLO-01,history,prescricao,2026-01-15T08:00:00Z,ativo,estado,,,,2026-01-15T10:00:00Z,simulado
+EPISODIO-EXEMPLO-01,history,movimento,2026-01-15T08:00:00Z,no_leito,evento,,,,2026-01-15T10:00:00Z,simulado
+EPISODIO-EXEMPLO-01,plan,prescricao,2026-01-15T09:00:00Z,pausado,estado,PLANO-ITEM,2026-01-15T10:00:00Z,2026-01-15T10:10:00Z,2026-01-15T10:00:00Z,simulado
+EPISODIO-EXEMPLO-01,plan,movimento,2026-01-15T09:00:00Z,saida_leito,evento,PLANO-MOVIMENTO,2026-01-15T10:00:00Z,2026-01-15T10:10:00Z,2026-01-15T10:00:00Z,simulado
+EPISODIO-EXEMPLO-01,history,prescricao,2026-01-15T09:55:00Z,ativo,estado,,,,2026-01-15T10:00:00Z,simulado
+EPISODIO-EXEMPLO-01,history,movimento,2026-01-15T09:55:00Z,no_leito,evento,,,,2026-01-15T10:00:00Z,simulado
+EPISODIO-EXEMPLO-01,observation,prescricao,2026-01-15T10:00:00Z,pausado,estado,,,,2026-01-15T10:00:00Z,simulado
+EPISODIO-EXEMPLO-01,observation,movimento,2026-01-15T10:00:00Z,saida_leito,evento,,,,2026-01-15T10:00:00Z,simulado
