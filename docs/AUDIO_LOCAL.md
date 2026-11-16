@@ -10,6 +10,8 @@ ou dados de pacientes.
 - Python 3.10–3.12 e o ambiente virtual usado pelo projeto; ensaio realizado em 3.12.
 - Streamlit 1.32.0 e os requisitos públicos já instalados.
 - faster-whisper 1.2.1 opcional, no **mesmo Python do Streamlit**.
+- Apenas para MP3: FFmpeg local já instalado e disponível no `PATH` do servidor.
+  Não há nova dependência Python. Sem FFmpeg, o caminho WAV continua funcionando.
 - Pesos Whisper/CTranslate2 de fonte confiável em `models/whisper-tiny` na raiz
   local do projeto: `model.bin`, `config.json` e `tokenizer.json`. O app não baixa modelos.
 - WAV RIFF, PCM16 mono, 16.000 Hz, de 0,25 segundo a **12 minutos**, até **24 MiB**.
@@ -18,6 +20,11 @@ ou dados de pacientes.
   com limites de quantidade, tamanho e padding. São descartados; nunca apresentados
   nem entregues ao motor. Player e ASR recebem áudio sem esses metadados.
   Blocos desconhecidos, cabeçalho estendido, dados duplicados ou truncados são rejeitados.
+- MP3 Layer III (MPEG 1, 2 ou 2.5), mono ou estéreo, taxa de origem fixa entre
+  8.000 e 48.000 Hz. Bitrate variável é aceito. Até 24 MiB no arquivo e até
+  12 minutos **depois da decodificação**, com mínimo de 0,25 segundo.
+  O aplicativo normaliza para o mesmo PCM16 mono a 16.000 Hz usado pelo WAV.
+  Outros formatos, como M4A, AAC e OGG, ainda não são aceitos.
 
 Doze minutos nesse formato ocupam 23.040.044 bytes, aproximadamente 21,97 MiB,
 mais eventuais metadados dentro do limite. Os limites de bytes e duração são
@@ -122,7 +129,7 @@ integridade dos pesos; o carregamento real continua validado no momento da infer
 python -m streamlit run app/app.py --server.address=127.0.0.1 --browser.gatherUsageStats=false
 ```
 
-1. Abra **🔊 Áudio** e importe o WAV de teste.
+1. Abra **🔊 Áudio** e importe o WAV ou MP3 de teste.
 2. Clique **Validar e ouvir**. Confira formato, duração e o áudio no player.
 3. Selecione o **idioma falado no áudio**; os pesos locais são encontrados automaticamente.
 4. Clique **Transcrever localmente**. Confira os segmentos ouvindo o arquivo.
@@ -140,7 +147,9 @@ Se um `.wav` for apenas um **ponteiro Git LFS**, a página explica que ele não 
 áudio e pede o arquivo completo. A detecção usa a estrutura exata de um ponteiro,
 não o nome, a extensão ou um tamanho fixo. Não converta o texto do ponteiro em áudio.
 
-Gravações de até 12 minutos podem ser usadas **inteiras, sem corte manual**.
+Gravações dentro do limite decodificado de 12 minutos podem ser usadas
+**inteiras, sem corte manual**. O padding MP3 pode exceder esse limite, como
+explicado abaixo; WAV canônico de exatamente 12 minutos é aceito.
 Quando for necessário converter o formato, use seu FFmpeg já instalado:
 
 ```powershell
@@ -150,9 +159,52 @@ ffmpeg -n -i entrada.wav -ac 1 -ar 16000 -c:a pcm_s16le -map_metadata -1 -fflags
 O comando não recorta nem presume que a fala começa no segundo zero. A opção
 `-n` impede sobrescrever um arquivo existente. Se a duração exceder 12 minutos,
 o app rejeitará o arquivo inteiro, sem truncar. Só nesse caso é necessário escolher
-um trecho menor, ouvindo a origem antes. O app não executa FFmpeg,
-não converte arquivos e não decodifica contêineres genéricos; entrega ao motor um
-array PCM já validado.
+um trecho menor, ouvindo a origem antes. O caminho WAV continua sem conversão
+automática. Para MP3, a conversão local descrita abaixo prepara o mesmo array PCM
+validado antes de entregá-lo ao motor, sem alterar o arquivo original.
+
+## Importação MP3
+
+Selecione o MP3 diretamente, sem renomear sua extensão para WAV. Antes de abrir
+o decodificador, o aplicativo verifica bytes e percorre todos os quadros Layer III,
+rejeitando formato misto, quadros truncados, bytes adicionais e duração excessiva.
+Essa etapa verifica estrutura, não qualidade ou segurança semântica do conteúdo.
+
+São aceitos tags iniciais ID3v2.3/2.4 sem footer e um tag final ID3v1, até 64 KiB
+somados. Os tags são delimitados, descartados e nunca apresentados ou enviados ao
+decodificador. ID3v2.2, footer, APEv2, streams free-format e outros metadados não
+são suportados. Arquivos válidos fora desse subconjunto podem ser recusados.
+
+O FFmpeg é opcional e executado em subprocesso com argumentos fixos, sem shell,
+sem caminhos fornecidos pelo upload e sem arquivos temporários de mídia. A entrada
+é explicitamente MP3/Layer III, e os únicos protocolos permitidos são pipes em
+memória. Não há download, URL de mídia ou chamada a serviço de conversão.
+A saída é limitada a 23.040.000 bytes PCM e novamente validada. O player recebe
+somente o WAV resultante; nunca recebe o MP3 ainda não validado.
+
+A espera pelo decodificador tem prazo de 60 segundos, seguido pelo encerramento
+do processo e das threads. Não é promessa de 60 segundos exatos para a operação
+inteira. Timeout, estouro de saída ou erro descartam tudo, sem transcrição parcial.
+Há limite de alocação individual do FFmpeg de 64 MiB, **não** um teto da memória
+total do processo. Isso é isolamento de processo, não um sandbox de segurança
+do sistema operacional. Use um FFmpeg atualizado de fonte confiável.
+
+MP3 é um formato com perdas. A conversão não melhora automaticamente a transcrição,
+e delay/padding do codificador pode mudar ligeiramente a duração e os tempos.
+Por isso, um MP3 cuja origem tem exatamente 12 minutos pode ultrapassar o limite
+decodificado e ser recusado. O app não remove amostras para fazê-lo caber.
+WAV canônico de exatamente 12 minutos continua aceito.
+
+No mesmo terminal que inicia o Streamlit, confira a disponibilidade:
+
+```powershell
+ffmpeg -version
+```
+
+Se o comando não for encontrado, disponibilize no `PATH` seu FFmpeg já instalado
+e reinicie o servidor; não basta ter PyAV no Python. O aplicativo não instala
+FFmpeg nem altera o `PATH`. O botão de validação apresenta uma mensagem curta
+quando o executável não está disponível.
 
 ## Processamento de áudio longo
 
@@ -209,8 +261,7 @@ promete apagamento seguro da memória do sistema nem de cópias feitas fora do a
 
 ## Verificação
 
-A suíte completa passou em **116 testes** na integração, incluindo a amostra
-oficial BIDMC externa. Ela inclui testes determinísticos, Streamlit 1.32 AppTest e, quando
+A suíte inclui testes determinísticos, Streamlit 1.32 AppTest e, quando
 fornecida, a cópia oficial externa BIDMC. A amostra deve permanecer fora do projeto:
 
 ```powershell
@@ -225,6 +276,29 @@ orçamento cooperativo, metadados válidos/inválidos, estados, navegação e fa
 também verificam a pasta padrão independente do diretório atual, override do servidor,
 ausência do campo de caminho e reprodução disponível sem o motor preparado;
 não demonstram qualidade do reconhecimento.
+
+Os testes de MP3 cobrem limites de bytes/quadros/duração/amostras, descarte de
+metadados, formatos renomeados, corrupção, prazo e encerramento do subprocesso,
+ausência de FFmpeg e saída inválida. Dublês de decodificação e ASR verificam que
+apenas PCM aprovado chega ao player/motor. Remover, substituir, revalidar ou limpar
+um arquivo invalida a seleção, incluindo resultados/erros que terminem atrasados.
+Esses testes não substituem execução nativa de FFmpeg ou reconhecimento real.
+
+**Smoke real de MP3 separado:** a mesma voz sintética inglesa foi codificada
+localmente em MP3 estéreo a 44.100 Hz e reconhecida pelo tiny offline. As 23
+palavras coincidiram com a referência após normalizar caixa e pontuação, incluindo
+as duas negações; a pontuação mudou. A duração normalizada foi 7,419875 s, contra
+7,395 s no WAV de origem. Não é prova de acurácia geral. Um tom sintético de 3 s
+não produziu segmentos; silêncio MP3 foi rejeitado antes da ASR por gerar PCM zero.
+Um MP3 VBR sintético de 8 minutos também preservou as três falas e as duas negações,
+com a última fala em 470,18–473,14 s. Um segmento ainda reuniu as duas primeiras
+falas e suas pausas; tempos não são uma segmentação exata de atividade vocal.
+
+MP3 corrompido, truncado, WAV apenas renomeado e origem de 721 s foram recusados.
+Uma origem de exatamente 720 s foi recusada após decodificação por causa de
+padding adicional, como previsto pelo limite estrito. Nenhum original foi alterado.
+Os controles MP3 reais usaram FFmpeg 7.1.5 em Linux; não validam execução Windows,
+todos os codificadores, fala portuguesa ou upload nativo no navegador.
 
 **Smoke real separado:** faster-whisper 1.2.1 + tiny na revisão acima reconheceram
 um arquivo inglês de 7,395 s gerado localmente com a voz sintética Flite `slt`.
@@ -261,10 +335,14 @@ as entradas sem chamar a ASR.
 
 A inferência de ensaio usou pesos locais, Silero incluído no pacote, flags offline e conexões Python bloqueadas,
 sem tentativas registradas. Não houve captura de pacotes. **Português falado, upload
-nativo no navegador e Windows ainda não foram validados.** Pesos e áudios não fazem
-parte deste repositório.
+nativo no navegador e Windows ainda não foram validados.** Pesos e arquivos gerados
+nesses ensaios não são incluídos pelo recurso de áudio. O kit `Datasets/audio`
+contém separadamente as amostras sintéticas e seus avisos de licença.
 
 Fontes técnicas:
 - [faster-whisper 1.2.1](https://github.com/SYSTRAN/faster-whisper/tree/v1.2.1)
 - [Pesos oficiais na revisão fixa](https://huggingface.co/Systran/faster-whisper-tiny/tree/d90ca5fe260221311c53c58e660288d3deb8d356)
 - [Streamlit 1.32: file_uploader](https://docs.streamlit.io/1.32.0/develop/api-reference/widgets/st.file_uploader)
+- [FFmpeg: opções](https://ffmpeg.org/ffmpeg.html)
+- [FFmpeg: protocolo pipe](https://ffmpeg.org/ffmpeg-protocols.html#pipe)
+- [ID3v2.4: estrutura](https://id3.org/id3v2.4.0-structure)
